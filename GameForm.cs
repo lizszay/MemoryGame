@@ -9,6 +9,8 @@ namespace MemoryGame
 {
     public partial class GameForm : Form
     {
+        // Тестовая отправка — [01.12.2025 2:55]
+        // Тестовая отправка2 — [01.12.2025 2:57]
         private GameBoard gameBoard;
         private GameTimer gameTimer;
         private int moves;
@@ -249,38 +251,6 @@ namespace MemoryGame
 
             if (clickedCard.IsFlipped || clickedCard.IsMatched) return;
 
-            // 🔥 Проверка: если это карта Shuffle — обрабатываем мгновенно
-            if (clickedCard.Type == CardType.Shuffle)
-            {
-                // Переворачиваем карту, чтобы игрок увидел
-                clickedCard.IsFlipped = true;
-                clickedButton.BackgroundImage = clickedCard.Image;
-
-                // Запускаем задержку → потом перемешиваем
-                var timer = new Timer { Interval = 1000 };
-                timer.Tick += (s, ev) =>
-                {
-                    timer.Stop();
-
-                    // Убираем карту
-                    clickedCard.IsMatched = true;
-                    clickedButton.Visible = false;
-
-                    // Перемешиваем и обновляем поле
-                    gameBoard.ShuffleCards();
-                    RecreateCardButtons();
-
-                    // Не увеличиваем moves, не вызываем ResetSelection() — просто сброс
-                    firstSelectedCard = null;
-                    secondSelectedCard = null;
-                    isProcessing = false;
-                };
-                timer.Start();
-
-                return; // ❗ Важно: выходим, не продолжаем логику обычного хода
-            }
-
-            // === Обычная логика для НЕ-спецкарт ===
             FlipCard(clickedCard, clickedButton);
 
             if (firstSelectedCard == null)
@@ -289,27 +259,16 @@ namespace MemoryGame
             }
             else
             {
-                // Вторая карта — проверим, не является ли она Hint или Shuffle
-                if (clickedCard.Type == CardType.Hint)
+                secondSelectedCard = clickedCard;
+                // Ход засчитывается ТОЛЬКО если ни одна из карт — не Shuffle
+                if (firstSelectedCard.Type != CardType.Shuffle && secondSelectedCard.Type != CardType.Shuffle)
                 {
-                    // Обработка Hint как обычного хода (с ходом)
-                    secondSelectedCard = clickedCard;
                     moves++;
                     movesLabel.Text = $"Ходы: {moves}";
                     UpdateStars();
-                    isProcessing = true;
-                    ProcessTurn();
                 }
-                else
-                {
-                    // Обычный ход (Regular ↔ Regular)
-                    secondSelectedCard = clickedCard;
-                    moves++;
-                    movesLabel.Text = $"Ходы: {moves}";
-                    UpdateStars();
-                    isProcessing = true;
-                    ProcessTurn();
-                }
+                isProcessing = true;
+                ProcessTurn();
             }
         }
 
@@ -321,12 +280,22 @@ namespace MemoryGame
 
         private void ProcessTurn()
         {
-            // Теперь сюда попадают только Hint или Regular карты
+            // Случай: одна из карт — Shuffle
+            if (firstSelectedCard.Type == CardType.Shuffle || secondSelectedCard.Type == CardType.Shuffle)
+            {
+                ProcessShuffleCard();
+                return;
+            }
+
+            // Случай: одна из карт — Hint
             if (firstSelectedCard.Type == CardType.Hint || secondSelectedCard.Type == CardType.Hint)
             {
                 ProcessHintCard();
+                return;
             }
-            else if (firstSelectedCard.Id == secondSelectedCard.Id && firstSelectedCard.Type == CardType.Regular)
+
+            // Обычный ход
+            if (firstSelectedCard.Id == secondSelectedCard.Id)
             {
                 ProcessMatch();
             }
@@ -390,36 +359,59 @@ namespace MemoryGame
 
         private void ProcessShuffleCard()
         {
-            // Определяем, какая из двух карт — Shuffle
             Card shuffleCard = firstSelectedCard.Type == CardType.Shuffle ? firstSelectedCard : secondSelectedCard;
-            Button shuffleButton = FindButtonForCard(shuffleCard);
+            Card otherCard = firstSelectedCard.Type == CardType.Shuffle ? secondSelectedCard : firstSelectedCard;
 
-            // Убеждаемся, что карта перевёрнута (на случай, если вторая не была показана)
+            Button shuffleButton = FindButtonForCard(shuffleCard);
+            Button otherButton = FindButtonForCard(otherCard);
+
+            // Переворачиваем Shuffle, если ещё не перевёрнут
             if (shuffleButton != null && !shuffleCard.IsFlipped)
             {
                 shuffleCard.IsFlipped = true;
                 shuffleButton.BackgroundImage = shuffleCard.Image;
             }
 
-            // Временная задержка, чтобы игрок увидел карту
-            var delayTimer = new Timer { Interval = 1000 }; // 1 секунда
-            delayTimer.Tick += (s, e) =>
+            // Если есть "другая" карта — закрываем её (если она не спец)
+            if (otherButton != null && otherCard.Type == CardType.Regular)
             {
-                delayTimer.Stop();
+                otherCard.IsFlipped = false;
+                otherButton.BackgroundImage = otherCard.GetBackImage();
+            }
 
-                // Убираем карту Shuffle
+            // Отключаем все кнопки на время анимации
+            foreach (Button btn in gamePanel.Controls.OfType<Button>())
+            {
+                btn.Enabled = false;
+            }
+
+            // Задержка 1 секунда
+            var timer = new Timer { Interval = 1000 };
+            timer.Tick += (s, e) =>
+            {
+                timer.Stop();
+
+                // Включаем кнопки
+                foreach (Button btn in gamePanel.Controls.OfType<Button>())
+                {
+                    btn.Enabled = !isPaused;
+                }
+
+                // Убираем Shuffle
                 shuffleCard.IsMatched = true;
-                shuffleButton?.Hide(); // или Visible = false
+                shuffleButton?.Hide();
 
-                // Перемешиваем оставшиеся НЕСОПОСТАВЛЕННЫЕ карты
+                // Если другая карта — спец (Hint), она остаётся (редкий случай)
+                // Но если она Regular — она уже закрыта
+
+                // Перемешиваем и обновляем поле
                 gameBoard.ShuffleCards();
-
-                // Сбрасываем выбор и обновляем поле
-                ResetSelection();
                 RecreateCardButtons();
-            };
 
-            delayTimer.Start();
+                ResetSelection();
+                CheckGameEnd();
+            };
+            timer.Start();
         }
 
         private void ProcessMatch()
