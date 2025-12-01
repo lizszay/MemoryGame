@@ -4,21 +4,21 @@ namespace MemoryGame.GameLogic
 {
     public class Card
     {
-        public int Id { get; set; }
-        public Image Image { get; set; }
-        public CardType Type { get; set; }
-        public bool IsFlipped { get; set; }
-        public bool IsMatched { get; set; }
-        public string Theme { get; set; }
+        public int Id { get; set; } //ид карты
+        public Image Image { get; set; }    //изображение лицевой стороны карты
+        public CardType Type { get; set; }  //обычная, подсказка, перемешивыание
+        public bool IsFlipped { get; set; } //переернута ли
+        public bool IsMatched { get; set; } //найдена ли пара
+        public string Theme { get; set; }   //тема карточки
 
         public Card(int id, CardType type, string theme = "")
         {
             Id = id;
             Type = type;
             Theme = theme;
-            IsFlipped = false;
-            IsMatched = false;
-            LoadImage();
+            IsFlipped = false;  // Изначально все карты рубашкой вверх
+            IsMatched = false;  // Изначально ни одна карта не найдена
+            LoadImage();        // Загружаем изображение
         }
 
         private void LoadImage()
@@ -38,6 +38,7 @@ namespace MemoryGame.GameLogic
                     break;
             }
 
+            // карточка создается, но свойство Image остается null
             if (System.IO.File.Exists(imagePath))
             {
                 Image = Image.FromFile(imagePath);
