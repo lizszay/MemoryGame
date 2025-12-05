@@ -24,47 +24,10 @@ namespace MemoryGame
             this.BackColor = Color.Black;
 
             // Настраиваем форму для поддержки анимации
-            this.Opacity = 0; // Начинаем прозрачной для плавного появления
             this.FormBorderStyle = FormBorderStyle.None;
             this.WindowState = FormWindowState.Maximized;
 
             InitializeCustomComponents();
-
-            // Анимация появления формы при загрузке
-            this.Shown += async (s, e) =>
-            {
-                // Плавное появление формы
-                for (double opacity = 0; opacity <= 1.0; opacity += 0.1)
-                {
-                    this.Opacity = opacity;
-                    await Task.Delay(15);
-                    Application.DoEvents();
-                }
-            };
-        }
-
-        // Метод плавного появления формы
-        private async Task FadeIn(Form form, int duration)
-        {
-            for (double opacity = 0; opacity <= 1.0; opacity += 0.1)
-            {
-                if (form.IsDisposed) return;
-                form.Opacity = opacity;
-                await Task.Delay(duration / 10);
-                Application.DoEvents();
-            }
-        }
-
-        // Метод плавного исчезновения формы
-        private async Task FadeOut(Form form, int duration)
-        {
-            for (double opacity = 1.0; opacity > 0; opacity -= 0.1)
-            {
-                if (form.IsDisposed) return;
-                form.Opacity = opacity;
-                await Task.Delay(duration / 10);
-                Application.DoEvents();
-            }
         }
 
         protected override CreateParams CreateParams

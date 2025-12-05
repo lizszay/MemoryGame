@@ -38,12 +38,6 @@ namespace MemoryGame
             // когда онко станет активным
             this.Activated += async (s, e) =>
             {
-                // Плавно появляемся при возвращении из других форм
-                // НО ТОЛЬКО ЕСЛИ ЭТО НЕ ПЕРВЫЙ ЗАПУСК
-                if (!isFirstActivation && this.Opacity < 1.0)
-                {
-                    await FadeIn(this, 300); // Уменьшили с 1000 до 300 мс
-                }
                 isFirstActivation = false; // После первого срабатывания - флаг сбрасываем
             };
 
@@ -53,6 +47,49 @@ namespace MemoryGame
                 isFirstActivation = false; // После первого показа
             };
         }
+
+            private async System.Threading.Tasks.Task SwitchToForm(Form nextForm)
+            {
+                // 1. Создаём и показываем затычку
+                CoverForm cover = new CoverForm();
+                cover.Show();
+                cover.BringToFront();
+
+                // 2. Даём системе время отрисовать затычку
+                await System.Threading.Tasks.Task.Yield();
+
+                // 3. Скрываем текущую форму (меню)
+                this.Hide();
+
+                // 4. Подписываемся на закрытие новой формы — чтобы вернуть меню
+                nextForm.FormClosed += (sender, args) =>
+                {
+                    if (!this.IsDisposed)
+                    {
+                        this.Invoke((MethodInvoker)delegate
+                        {
+                            this.Show();
+                            this.BringToFront();
+                        });
+                    }
+                    if (!cover.IsDisposed)
+                    {
+                        cover.Invoke((MethodInvoker)delegate
+                        {
+                            cover.Close();
+                        });
+                    }
+                };
+
+                // 5. Показываем новую форму
+                nextForm.Show();
+                nextForm.BringToFront();
+
+                if (!cover.IsDisposed)
+                {
+                    cover.Close();
+                }
+            }
 
         // Переопределяем свойство CreateParams для настройки параметров создания окна
         protected override CreateParams CreateParams
@@ -131,7 +168,7 @@ namespace MemoryGame
                 // Ожидаем установки флага isInitialized = true
                 while (!isInitialized)
                 {
-                    Application.DoEvents(); // Обрабатываем ожидающие сообщения Windows
+                    
                     System.Threading.Thread.Sleep(10); // Небольшая пауза
                 }
             }
@@ -433,27 +470,28 @@ namespace MemoryGame
         // Метод запуска игры (упрощенный)
         private async void StartGame(string theme, string level, int rows = 0, int cols = 0)
         {
-            // Плавно скрываем меню
-            await FadeOut(this, 300);
-
-            // Скрываем меню
-            this.Hide();
-
-            // Создаем игру
-            GameForm gameForm = (rows > 0 && cols > 0)
-                ? new GameForm(theme, level, rows, cols)
-                : new GameForm(theme, level);
-
-            // Когда игра закроется
-            gameForm.FormClosed += (s, e) =>
+            GameForm gameForm;
+            if (rows > 0 && cols > 0)
             {
-                // Просто показываем меню
-                this.Show();
-                this.BringToFront();
-            };
+                gameForm = new GameForm(theme, level, rows, cols);
+            }
+            else
+            {
+                gameForm = new GameForm(theme, level);
+            }
+            await this.SwitchToForm(gameForm);
 
-            // Показываем игру
-            gameForm.Show();
+            gameForm.ShowRulesRequested += async (s, e) =>
+            {
+                // Ставим игру на паузу
+                gameForm.PauseGameForRules();
+
+                RulesForm rulesForm = new RulesForm();
+                await this.SwitchToForm(rulesForm);
+
+                // После возврата — возобновляем игру
+                gameForm.ResumeGameAfterRules();
+            };
         }
 
         // Вспомогательный метод для прямого показа игры (если оверлей был закрыт)
@@ -476,18 +514,11 @@ namespace MemoryGame
         // Метод показа формы с правилами
         private async void ShowRules()
         {
-            // Плавно скрываем меню
-            await FadeOut(this, 300);
-
-            // Показываем форму правил как модальное окно
-            using (var rulesForm = new RulesForm())
+            using (RulesForm rules = new RulesForm())
             {
-                rulesForm.ShowDialog(this); // ← блокирует работу до закрытия
+                rules.ShowDialog(this); // ← модально, поверх меню
             }
-
-            // После закрытия правил — сразу показываем меню
-            this.Show();
-            await FadeIn(this, 300);
+            // После закрытия — меню уже на месте, ничего делать не надо
         }
 
         // Вспомогательный метод для прямого показа правил
@@ -503,35 +534,6 @@ namespace MemoryGame
 
             this.Hide();
             rulesForm.Show();
-        }
-
-        // Метод плавного исчезновения формы
-        private async Task FadeOut(Form form, int duration)
-        {
-            // 10 шагов анимации (от 100% до 0% прозрачности)
-            for (double opacity = 1.0; opacity > 0; opacity -= 0.1)
-            {
-                if (form.IsDisposed) return; // Проверка на случай закрытия формы
-
-                form.Opacity = opacity;
-                await Task.Delay(duration / 10);
-                Application.DoEvents(); // Обрабатываем сообщения Windows
-            }
-        }
-
-        // Метод плавного появления формы
-        // async - модификатор, что внутри await
-        private async Task FadeIn(Form form, int duration)
-        {
-            // 10 шагов анимации (от 0% до 100% прозрачности)
-            for (double opacity = 0; opacity <= 1.0; opacity += 0.1)
-            {
-                if (form.IsDisposed) return; // Проверка на случай закрытия формы
-
-                form.Opacity = opacity;
-                await Task.Delay(duration / 10);
-                Application.DoEvents(); // Обрабатываем сообщения Windows
-            }
         }
 
         // Обработчик клика по кнопке "Выход"

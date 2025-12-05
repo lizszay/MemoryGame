@@ -63,6 +63,11 @@ namespace MemoryGame
         // Кнопка "Пауза", расположенная на правой панели
         private Button pauseButton;
 
+        public event EventHandler ReturnToMenuRequested;
+        public event EventHandler ShowRulesRequested;
+
+        private bool rulesOpenedFromGame = false;
+
         // === КОНСТРУКТОРЫ ===
 
         // Конструктор для стандартных уровней: вызывает перегрузку с нулевыми размерами
@@ -75,7 +80,6 @@ namespace MemoryGame
             currentLevel = level;
 
             // Настраиваем форму для поддержки анимации
-            //this.Opacity = 0; // Начинаем прозрачной
             // this.FormBorderStyle = FormBorderStyle.None;
             this.WindowState = FormWindowState.Maximized;   //форму на весь экран
             this.BackColor = Color.Black; // Основной фон черный
@@ -233,9 +237,10 @@ namespace MemoryGame
             // Таблица для вертикального размещения двух кнопок
             TableLayoutPanel buttonPanel = new TableLayoutPanel();
             buttonPanel.Dock = DockStyle.Fill;
-            buttonPanel.RowCount = 2;
-            buttonPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 50)); // Каждая кнопка — 50% высоты
-            buttonPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            buttonPanel.RowCount = 3;
+            buttonPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33f));
+            buttonPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33f));
+            buttonPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33f));
 
             // Кнопка "Пауза"
             pauseButton = CreateSideButton("⏸️ Пауза");
@@ -245,9 +250,14 @@ namespace MemoryGame
             Button menuButton = CreateSideButton("В меню");
             menuButton.Click += MenuButton_Click;
 
+            // Кнопка "Правила"
+            Button rulesButton = CreateSideButton("📖 Правила");
+            rulesButton.Click += (s, e) => ShowRulesFromGame();
+
             // Добавляем кнопки в таблицу
             buttonPanel.Controls.Add(pauseButton, 0, 0);
             buttonPanel.Controls.Add(menuButton, 0, 1);
+            buttonPanel.Controls.Add(rulesButton, 0, 1);
 
             rightPanel.Controls.Add(buttonPanel);
             this.Controls.Add(rightPanel);
@@ -265,7 +275,7 @@ namespace MemoryGame
             button.FlatAppearance.BorderSize = 2; // Толщина рамки
             button.FlatAppearance.BorderColor = Color.White; // Цвет рамки
             button.Dock = DockStyle.Fill; // Заполняет ячейку
-            button.Margin = new Padding(10); // Отступы
+            button.Margin = new Padding(8, 4, 8, 4); // Отступы
             button.Cursor = Cursors.Hand; // Курсор-рука при наведении
             return button;
         }
@@ -825,52 +835,79 @@ namespace MemoryGame
                 }
             }
 
-            // Создаем черную форму-оверлей для плавного перехода без видимости рабочего стола
-            Form blackOverlay = new Form
-            {
-                FormBorderStyle = FormBorderStyle.None,
-                WindowState = FormWindowState.Maximized,
-                BackColor = Color.Black,
-                Opacity = 0,
-                TopMost = true,
-                ShowInTaskbar = false,
-                ControlBox = false
-            };
-
-            // Показываем черный оверлей
-            blackOverlay.Show();
-            blackOverlay.BringToFront();
-
-            // Блокируем форму игры во время анимации
-            this.Enabled = false;
-
-            // Плавно увеличиваем прозрачность черного оверлея, одновременно уменьшая прозрачность игры
-            for (double opacity = 0; opacity <= 1.0; opacity += 0.1)
-            {
-                if (blackOverlay.IsDisposed) break;
-                blackOverlay.Opacity = opacity;
-                this.Opacity = 1.0 - opacity; // Игра исчезает по мере появления черного экрана
-                await Task.Delay(15);
-                Application.DoEvents();
-            }
-
-            // Закрываем черный оверлей
-            if (!blackOverlay.IsDisposed)
-                blackOverlay.Close();
 
             // Закрываем игровую форму - это вызовет событие FormClosed,
             // на которое подписан MainMenuForm для своего появления
             this.Close();
         }
 
-        // Метод плавного исчезновения (добавьте в GameForm)
-        private async Task FadeOut(Form form, int duration)
+        //обработка кнопки правила 
+        // Вызывается из MainMenuForm перед открытием правил
+        public void PauseGameForRules()
         {
-            for (double opacity = 1.0; opacity > 0; opacity -= 0.1)
+            if (!isPaused)
             {
-                form.Opacity = opacity;
-                await Task.Delay(duration / 10);
-                Application.DoEvents(); // Обрабатываем сообщения во время анимации
+                // Вручную ставим на паузу, но НЕ меняем текст кнопки и не показываем оверлей
+                gameTimer.Stop();
+                isPaused = true;
+                rulesOpenedFromGame = true;
+
+                // Отключаем карты
+                foreach (Control control in gamePanel.Controls)
+                {
+                    if (control is Button btn)
+                        btn.Enabled = false;
+                }
+            }
+        }
+
+        // Вызывается из MainMenuForm после закрытия правил
+        public void ResumeGameAfterRules()
+        {
+            if (rulesOpenedFromGame)
+            {
+                gameTimer.Start();
+                isPaused = false;
+                rulesOpenedFromGame = false;
+
+                // Включаем карты
+                foreach (Control control in gamePanel.Controls)
+                {
+                    if (control is Button btn)
+                        btn.Enabled = true;
+                }
+
+                // Обновляем кнопку паузы (на случай, если пользователь нажал её вручную — но маловероятно)
+                pauseButton.Text = "⏸️ Пауза";
+            }
+        }
+
+        private void ShowRulesFromGame()
+        {
+            // Опционально: ставим на паузу
+            bool wasRunning = !isPaused;
+            if (wasRunning)
+            {
+                gameTimer.Stop();
+                isPaused = true;
+                // Отключаем карты
+                foreach (Control c in gamePanel.Controls)
+                    if (c is Button b) b.Enabled = false;
+            }
+
+            // Показываем правила
+            using (RulesForm rules = new RulesForm())
+            {
+                rules.ShowDialog(this); // ← модально, поверх игры
+            }
+
+            // Возобновляем игру
+            if (wasRunning)
+            {
+                gameTimer.Start();
+                isPaused = false;
+                foreach (Control c in gamePanel.Controls)
+                    if (c is Button b) b.Enabled = true;
             }
         }
 
@@ -928,46 +965,6 @@ namespace MemoryGame
                 case "Растения": return "plants";
                 default: return "animals";
             }
-        }
-
-        // Метод плавного закрытия формы с анимацией
-        private async void CloseWithAnimationAsync()
-        {
-            // Создаем черную форму-оверлей для плавного перехода
-            Form blackOverlay = new Form
-            {
-                FormBorderStyle = FormBorderStyle.None,
-                WindowState = FormWindowState.Maximized,
-                BackColor = Color.Black,
-                Opacity = 0,
-                TopMost = true,
-                ShowInTaskbar = false,
-                ControlBox = false
-            };
-
-            // Показываем черный оверлей
-            blackOverlay.Show();
-            blackOverlay.BringToFront();
-
-            // Блокируем форму игры во время анимации
-            this.Enabled = false;
-
-            // Плавно увеличиваем прозрачность черного оверлея
-            for (double opacity = 0; opacity <= 1.0; opacity += 0.1)
-            {
-                if (blackOverlay.IsDisposed) break;
-                blackOverlay.Opacity = opacity;
-                this.Opacity = 1.0 - opacity;
-                await Task.Delay(15);
-                Application.DoEvents();
-            }
-
-            // Закрываем черный оверлей
-            if (!blackOverlay.IsDisposed)
-                blackOverlay.Close();
-
-            // Закрываем форму игры
-            this.Close();
         }
     }
 }
