@@ -476,66 +476,18 @@ namespace MemoryGame
         // Метод показа формы с правилами
         private async void ShowRules()
         {
-            // Создаем черную форму-оверлей для плавного перехода без видимости рабочего стола
-            Form blackOverlay = new Form
-            {
-                FormBorderStyle = FormBorderStyle.None,
-                WindowState = FormWindowState.Maximized,
-                BackColor = Color.Black,
-                Opacity = 0,
-                TopMost = true,
-                ShowInTaskbar = false,
-                ControlBox = false
-            };
+            // Плавно скрываем меню
+            await FadeOut(this, 300);
 
-            // Показываем черный оверлей
-            blackOverlay.Show();
-            blackOverlay.BringToFront();
-
-            // Плавно увеличиваем прозрачность черного оверлея
-            for (double opacity = 0; opacity <= 1.0; opacity += 0.1)
+            // Показываем форму правил как модальное окно
+            using (var rulesForm = new RulesForm())
             {
-                if (blackOverlay.IsDisposed) break;
-                blackOverlay.Opacity = opacity;
-                await Task.Delay(15);
-                Application.DoEvents();
+                rulesForm.ShowDialog(this); // ← блокирует работу до закрытия
             }
 
-            // Проверяем, что форма еще не закрыта
-            if (blackOverlay.IsDisposed)
-            {
-                // Если форма уже закрыта, просто показываем правила
-                ShowRulesDirectly();
-                return;
-            }
-
-            // Скрываем главное меню
-            this.Hide();
-
-            // Создаем форму правил
-            RulesForm rulesForm = new RulesForm();
-            rulesForm.Opacity = 0;
-
-            // Локальная переменная для отслеживания состояния оверлея
-            Form localOverlay = blackOverlay;
-
-            // Показываем форму правил
-            rulesForm.Show();
-            rulesForm.BringToFront();
-
-            // Плавно уменьшаем прозрачность черного оверлея, одновременно увеличивая прозрачность правил
-            for (double opacity = 1.0; opacity >= 0; opacity -= 0.1)
-            {
-                if (localOverlay.IsDisposed) break;
-                localOverlay.Opacity = opacity;
-                rulesForm.Opacity = 1.0 - opacity;
-                await Task.Delay(15);
-                Application.DoEvents();
-            }
-
-            // Закрываем черный оверлей
-            if (!localOverlay.IsDisposed)
-                localOverlay.Close();
+            // После закрытия правил — сразу показываем меню
+            this.Show();
+            await FadeIn(this, 300);
         }
 
         // Вспомогательный метод для прямого показа правил

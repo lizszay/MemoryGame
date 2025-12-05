@@ -552,7 +552,7 @@ namespace MemoryGame
             }
 
             // Через 1 секунду: скрываем Shuffle, перемешиваем и обновляем поле
-            var timer = new Timer { Interval = 1000 };
+            Timer timer = new Timer { Interval = 1000 };
             timer.Tick += (s, e) =>
             {
                 timer.Stop();
