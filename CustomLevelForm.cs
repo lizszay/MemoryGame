@@ -4,7 +4,7 @@ using System.Windows.Forms;
 
 namespace MemoryGame
 {
-    public partial class CustomLevelForm : Form
+    public class CustomLevelForm : Form
     {
         public int SelectedRows { get; private set; }
         public int SelectedColumns { get; private set; }
@@ -14,18 +14,87 @@ namespace MemoryGame
 
         public CustomLevelForm()
         {
-            InitializeComponent();
+            // Двойная буферизация - предотвращает мерцание
+            this.SetStyle(ControlStyles.AllPaintingInWmPaint |  //для снижения мерцания
+                         ControlStyles.UserPaint |  //отображение элемента управления выполняет сам элемент, а не операционная система
+                         ControlStyles.DoubleBuffer, true); //сначла рисует в буфере памяти,  затем за раз выводится все на экран
+            this.DoubleBuffered = true; // Дополнительная двойная буферизация
+
+            // Устанавливаем черный фон для предотвращения видимости рабочего стола
+            this.BackColor = Color.Black;
+
+            // Настраиваем форму для поддержки анимации
+            this.Opacity = 0; // Начинаем прозрачной для плавного появления
+            this.FormBorderStyle = FormBorderStyle.None;
+            this.WindowState = FormWindowState.Maximized;
+
             InitializeCustomComponents();
+
+            // Анимация появления формы при загрузке
+            this.Shown += async (s, e) =>
+            {
+                // Плавное появление формы
+                for (double opacity = 0; opacity <= 1.0; opacity += 0.1)
+                {
+                    this.Opacity = opacity;
+                    await Task.Delay(15);
+                    Application.DoEvents();
+                }
+            };
+        }
+
+        // Метод плавного появления формы
+        private async Task FadeIn(Form form, int duration)
+        {
+            for (double opacity = 0; opacity <= 1.0; opacity += 0.1)
+            {
+                if (form.IsDisposed) return;
+                form.Opacity = opacity;
+                await Task.Delay(duration / 10);
+                Application.DoEvents();
+            }
+        }
+
+        // Метод плавного исчезновения формы
+        private async Task FadeOut(Form form, int duration)
+        {
+            for (double opacity = 1.0; opacity > 0; opacity -= 0.1)
+            {
+                if (form.IsDisposed) return;
+                form.Opacity = opacity;
+                await Task.Delay(duration / 10);
+                Application.DoEvents();
+            }
+        }
+
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams cp = base.CreateParams;
+                cp.ExStyle |= 0x02000000; // WS_EX_COMPOSITED
+                return cp;
+            }
         }
 
         private void InitializeCustomComponents()
         {
+            this.SuspendLayout();
+
             this.FormBorderStyle = FormBorderStyle.None;
             this.WindowState = FormWindowState.Maximized;
-            this.BackColor = Color.LightBlue;
+            this.BackColor = Color.Black;
 
             Panel mainPanel = new Panel();
             mainPanel.Dock = DockStyle.Fill;
+            mainPanel.BackColor = Color.Black;
+
+            // Двойная буферизация для панели
+            typeof(Panel).GetProperty("DoubleBuffered",
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Instance)
+                .SetValue(mainPanel, true, null);
+
             try
             {
                 if (System.IO.File.Exists("img/ui/background.jpg"))
@@ -34,10 +103,7 @@ namespace MemoryGame
                     mainPanel.BackgroundImageLayout = ImageLayout.Stretch;
                 }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка загрузки фона: {ex.Message}");
-            }
+            catch { }
 
             TableLayoutPanel tableLayout = new TableLayoutPanel();
             tableLayout.Dock = DockStyle.Fill;
@@ -57,6 +123,7 @@ namespace MemoryGame
             titleLabel.TextAlign = ContentAlignment.MiddleCenter;
             titleLabel.Dock = DockStyle.Fill;
             tableLayout.Controls.Add(titleLabel, 0, 0);
+            tableLayout.BackColor = Color.Black;
 
             // Выбор строк
             Label rowsLabel = new Label();
@@ -65,6 +132,7 @@ namespace MemoryGame
             rowsLabel.TextAlign = ContentAlignment.MiddleCenter;
             rowsLabel.Dock = DockStyle.Fill;
             tableLayout.Controls.Add(rowsLabel, 0, 1);
+            tableLayout.BackColor = Color.Black;
 
             rowsNumeric = new NumericUpDown();
             rowsNumeric.Font = new Font("Times New Roman", 20, FontStyle.Regular);
@@ -75,6 +143,7 @@ namespace MemoryGame
             rowsNumeric.TextAlign = HorizontalAlignment.Center;
             rowsNumeric.Margin = new Padding(200, 5, 200, 5);
             tableLayout.Controls.Add(rowsNumeric, 0, 2);
+            tableLayout.BackColor = Color.Black;
 
             // Выбор столбцов
             Label columnsLabel = new Label();
@@ -83,6 +152,7 @@ namespace MemoryGame
             columnsLabel.TextAlign = ContentAlignment.MiddleCenter;
             columnsLabel.Dock = DockStyle.Fill;
             tableLayout.Controls.Add(columnsLabel, 0, 3);
+            tableLayout.BackColor = Color.Black;
 
             columnsNumeric = new NumericUpDown();
             columnsNumeric.Font = new Font("Times New Roman", 20, FontStyle.Regular);
@@ -99,7 +169,6 @@ namespace MemoryGame
             buttonPanel.Dock = DockStyle.Fill;
             buttonPanel.FlowDirection = FlowDirection.LeftToRight;
             buttonPanel.WrapContents = false;
-            buttonPanel.Anchor = AnchorStyles.None;
 
             Button startButton = CreateCustomButton("Начать игру", Color.Green);
             startButton.Click += StartButton_Click;
@@ -113,6 +182,9 @@ namespace MemoryGame
 
             mainPanel.Controls.Add(tableLayout);
             this.Controls.Add(mainPanel);
+
+            this.ResumeLayout(true);
+            this.PerformLayout();
         }
 
         private Button CreateCustomButton(string text, Color backColor)
@@ -133,29 +205,24 @@ namespace MemoryGame
 
         private void StartButton_Click(object sender, EventArgs e)
         {
+            // Сохраняем выбранные значения
             SelectedRows = (int)rowsNumeric.Value;
             SelectedColumns = (int)columnsNumeric.Value;
+
+            // Устанавливаем результат диалога
             this.DialogResult = DialogResult.OK;
+
+            // Закрываем форму
             this.Close();
         }
 
         private void CancelButton_Click(object sender, EventArgs e)
         {
+            // Устанавливаем результат отмены
             this.DialogResult = DialogResult.Cancel;
-            this.Close();
-        }
 
-        private void CustomLevelForm_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            if (e.CloseReason == CloseReason.UserClosing && this.DialogResult != DialogResult.OK)
-            {
-                DialogResult result = MessageBox.Show("Вы точно хотите выйти? Настройки не будут сохранены.",
-                    "Подтверждение выхода", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                if (result == DialogResult.No)
-                {
-                    e.Cancel = true;
-                }
-            }
+            // Закрываем форму
+            this.Close();
         }
     }
 }

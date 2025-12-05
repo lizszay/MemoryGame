@@ -3,14 +3,18 @@ using System.Windows.Forms;
 
 namespace MemoryGame
 {
-    internal static class Program
+    static class Program
     {
+        public static MainMenuForm MainMenuForm { get; private set; }
+
         [STAThread]
         static void Main()
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainMenuForm());
+
+            MainMenuForm = new MainMenuForm();
+            Application.Run(MainMenuForm);
         }
     }
 }
