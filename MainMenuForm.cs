@@ -129,7 +129,7 @@ namespace MemoryGame
             try
             {
                 // Формируем путь к файлу фона
-                string bgPath = System.IO.Path.Combine(Application.StartupPath, "img", "ui", "background.jpg");
+                string bgPath = System.IO.Path.Combine(Application.StartupPath, "img", "ui", "background2.jpg");
                 if (System.IO.File.Exists(bgPath))  // Проверяем существует ли файл
                 {
                     // Загружаем изображение и устанавливаем как фон
@@ -494,23 +494,6 @@ namespace MemoryGame
             };
         }
 
-        // Вспомогательный метод для прямого показа игры (если оверлей был закрыт)
-        private void ShowGameDirectly(string theme, string level, int rows, int cols)
-        {
-            GameForm gameForm = (rows > 0 && cols > 0)
-                ? new GameForm(theme, level, rows, cols)
-                : new GameForm(theme, level);
-
-            gameForm.FormClosed += (s, e) =>
-            {
-                this.Show();
-                this.BringToFront();
-            };
-
-            gameForm.Show();
-            gameForm.BringToFront(); // ← Игра поверх меню
-        }
-
         // Метод показа формы с правилами
         private async void ShowRules()
         {
@@ -519,21 +502,6 @@ namespace MemoryGame
                 rules.ShowDialog(this); // ← модально, поверх меню
             }
             // После закрытия — меню уже на месте, ничего делать не надо
-        }
-
-        // Вспомогательный метод для прямого показа правил
-        private void ShowRulesDirectly()
-        {
-            RulesForm rulesForm = new RulesForm();
-
-            rulesForm.FormClosed += (s, e) =>
-            {
-                this.Show();
-                this.BringToFront();
-            };
-
-            this.Hide();
-            rulesForm.Show();
         }
 
         // Обработчик клика по кнопке "Выход"

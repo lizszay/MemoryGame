@@ -60,9 +60,9 @@ namespace MemoryGame
 
             try
             {
-                if (System.IO.File.Exists("img/ui/background.jpg"))
+                if (System.IO.File.Exists("img/ui/background2.jpg"))
                 {
-                    mainPanel.BackgroundImage = Image.FromFile("img/ui/background.jpg");
+                    mainPanel.BackgroundImage = Image.FromFile("img/ui/background2.jpg");
                     mainPanel.BackgroundImageLayout = ImageLayout.Stretch;
                 }
             }

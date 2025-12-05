@@ -111,6 +111,9 @@
     <None Update="img\cards\special\back.jpg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="img\cards\special\background2.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="img\cards\special\hint.jpg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

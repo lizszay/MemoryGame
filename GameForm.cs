@@ -157,10 +157,13 @@ namespace MemoryGame
             CreateGamePanel();       // Центральная панель с картами
             CreatePauseOverlay();    // Оверлей паузы
 
+             pauseOverlay.BringToFront();
 
             // Запускаем таймер игры
             gameTimer.Start();
             this.Load += (s, e) => InitializeCardButtons(); // ← вызовется, когда форма готова
+            
+           
         }
 
         // === СОЗДАНИЕ ВЕРХНЕЙ ПАНЕЛИ ===
@@ -257,7 +260,7 @@ namespace MemoryGame
             // Добавляем кнопки в таблицу
             buttonPanel.Controls.Add(pauseButton, 0, 0);
             buttonPanel.Controls.Add(menuButton, 0, 1);
-            buttonPanel.Controls.Add(rulesButton, 0, 1);
+            buttonPanel.Controls.Add(rulesButton, 0, 2);
 
             rightPanel.Controls.Add(buttonPanel);
             this.Controls.Add(rightPanel);
@@ -303,7 +306,7 @@ namespace MemoryGame
         {
             pauseOverlay = new Panel();
             pauseOverlay.Dock = DockStyle.Fill;
-            pauseOverlay.BackColor = Color.FromArgb(180, Color.Black); // Полупрозрачный чёрный
+            pauseOverlay.BackColor = Color.FromArgb(150, Color.Black); // Полупрозрачный чёрный
             pauseOverlay.Visible = false; // Скрыт по умолчанию
 
             // Надпись "ИГРА НА ПАУЗЕ"
