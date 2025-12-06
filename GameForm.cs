@@ -887,15 +887,31 @@ namespace MemoryGame
 
         private void ShowRulesFromGame()
         {
-            // Опционально: ставим на паузу
-            bool wasRunning = !isPaused;
+            // Сохраняем текущее состояние таймера
+            bool wasRunning = gameTimer.IsRunning; // Нужно добавить public свойство IsRunning в GameTimer
+
+            // Ставим на паузу
+            gameTimer.Stop(); // Останавливаем таймер
+            isPaused = true;
+
+            // Отключаем карты
+            foreach (Control c in gamePanel.Controls)
+                if (c is Button b) b.Enabled = false;
+
+            // Показываем правила
+            using (RulesForm rules = new RulesForm())
+            {
+                rules.ShowDialog(this);
+            }
+
+            // Возобновляем игру
             if (wasRunning)
             {
-                gameTimer.Stop();
-                isPaused = true;
+                gameTimer.Start(); // Запускаем таймер с сохраненным временем
+                isPaused = false;
                 // Отключаем карты
                 foreach (Control c in gamePanel.Controls)
-                    if (c is Button b) b.Enabled = false;
+                    if (c is Button b) b.Enabled = true;
             }
 
             // Показываем правила

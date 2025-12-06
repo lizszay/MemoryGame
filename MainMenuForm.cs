@@ -193,7 +193,7 @@ namespace MemoryGame
 
             // Настраиваем таблицу
             mainTable.Dock = DockStyle.Fill;               // Растягиваем на всю панель
-            mainTable.RowCount = 4;                        // 4 строки
+            mainTable.RowCount = 5;                        // 4 строки
             mainTable.ColumnCount = 1;                     // 1 столбец
             mainTable.BackColor = Color.Transparent;       // Прозрачный фон
 
@@ -215,49 +215,70 @@ namespace MemoryGame
             mainTable.Controls.Add(titleLabel, 0, 0);             // Добавляем в таблицу (столбец 0, строка 0)
 
             // === 2. СОЗДАЕМ ПАНЕЛЬ ВЫБОРА ТЕМЫ ===
-            Panel themePanel = new Panel();
-            themePanel.Dock = DockStyle.Fill;
-            themePanel.BackColor = Color.Transparent;
-            themePanel.Margin = new Padding(20);   // Внешние отступы
-            themePanel.Padding = new Padding(10);  // Внутренние отступы
+            Panel themePanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(20),
+                Padding = new Padding(10)
+            };
 
-            Label themeLabel = new Label();
-            themeLabel.Text = "ВЫБЕРИТЕ ТЕМУ КАРТОЧЕК:";
-            themeLabel.Font = new Font("Times New Roman", 24, FontStyle.Bold);
-            themeLabel.ForeColor = Color.FromArgb(255, 255, 255);
-            themeLabel.TextAlign = ContentAlignment.MiddleCenter;
-            themeLabel.Dock = DockStyle.Top;      // Прикрепляем к верху панели
-            themeLabel.Height = 60;               // Фиксированная высота
-            themeLabel.BackColor = Color.Transparent;
+            Label themeLabel = new Label
+            {
+                Text = "ВЫБЕРИТЕ ТЕМУ КАРТОЧЕК:",
+                Font = new Font("Times New Roman", 24, FontStyle.Bold),
+                ForeColor = Color.White,
+                Height = 60,
+                Dock = DockStyle.Top,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
 
-            // Создаем панель с потоковым расположением для радиокнопок
-            FlowLayoutPanel themeFlow = new FlowLayoutPanel();
-            themeFlow.Dock = DockStyle.Fill;
-            themeFlow.FlowDirection = FlowDirection.LeftToRight; // Элементы слева направо
-            themeFlow.WrapContents = false;                      // Не переносить на новую строку
-            themeFlow.AutoSize = false;                          // Фиксированный размер
-            themeFlow.BackColor = Color.Transparent;
-            themeFlow.Margin = new Padding(50, 10, 50, 10);      // Отступы со всех сторон
+            // Создаём контейнер для центрирования
+            Panel centeredContainer = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent
+            };
 
-            // Настраиваем привязки для центрирования
-            themeFlow.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            themeFlow.AutoScroll = false; // Отключаем скроллинг
+            // FlowLayoutPanel будет содержать радиокнопки
+            FlowLayoutPanel themeFlow = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                AutoSize = true, // ← важно для центрирования
+                BackColor = Color.Transparent,
+                Margin = new Padding(0), // отступы снаружи
+                Padding = new Padding(10) // отступы внутри
+            };
 
-            // Создаем три радиокнопки для выбора темы
-            RadioButton rbAnimals = CreateThemeRadioButton("🐾 ЖИВОТНЫЕ", "Животные", true, Color.FromArgb(255, 200, 80)); // Оранжевый
-            RadioButton rbGeometry = CreateThemeRadioButton("🔷 ГЕОМЕТРИЯ", "Геометрические фигуры", false, Color.FromArgb(100, 150, 255)); // Синий
-            RadioButton rbPlants = CreateThemeRadioButton("🌿 РАСТЕНИЯ", "Растения", false, Color.FromArgb(150, 255, 100)); // Зелёный
+            // Создаём радиокнопки с меньшим шрифтом
+            RadioButton rbAnimals = CreateThemeRadioButton("🐾 ЖИВОТНЫЕ", "Животные", true, Color.FromArgb(255, 200, 80));
+            RadioButton rbGeometry = CreateThemeRadioButton("🔷 ГЕОМЕТРИЯ", "Геометрические фигуры", false, Color.FromArgb(100, 150, 255));
+            RadioButton rbPlants = CreateThemeRadioButton("🌿 РАСТЕНИЯ", "Растения", false, Color.FromArgb(150, 255, 100));
 
-            // Добавляем радиокнопки на панель
             themeFlow.Controls.Add(rbAnimals);
             themeFlow.Controls.Add(rbGeometry);
             themeFlow.Controls.Add(rbPlants);
 
-            // Добавляем элементы на панель темы
-            themePanel.Controls.Add(themeFlow);  // Сначала добавляем панель с кнопками
-            themePanel.Controls.Add(themeLabel); // Затем заголовок (будет сверху)
+            // Центрируем FlowLayoutPanel по горизонтали
+            centeredContainer.Controls.Add(themeFlow);
+            themeFlow.Location = new Point(
+                (centeredContainer.ClientSize.Width - themeFlow.Width) / 2,
+                (centeredContainer.ClientSize.Height - themeFlow.Height) / 2
+            );
 
-            // Добавляем панель темы в таблицу (столбец 0, строка 1)
+            // Обновляем позицию при изменении размера
+            centeredContainer.Resize += (s, e) =>
+            {
+                themeFlow.Location = new Point(
+                    Math.Max(0, (centeredContainer.ClientSize.Width - themeFlow.Width) / 2),
+                    Math.Max(0, (centeredContainer.ClientSize.Height - themeFlow.Height) / 2)
+                );
+            };
+
+            // Добавляем всё на панель темы
+            themePanel.Controls.Add(centeredContainer);
+            themePanel.Controls.Add(themeLabel);
+
             mainTable.Controls.Add(themePanel, 0, 1);
 
             // === 3. СОЗДАЕМ ПАНЕЛЬ ВЫБОРА УРОВНЯ ===
@@ -282,7 +303,8 @@ namespace MemoryGame
             levelTable.RowCount = 5;        // 5 строк для 5 уровней
             levelTable.ColumnCount = 1;     // 1 столбец
             levelTable.BackColor = Color.Transparent;
-            levelTable.Padding = new Padding(100, 10, 100, 10); // Большие отступы по бокам
+            //levelTable.Padding = new Padding(100, 10, 100, 10); // Большие отступы по бокам
+            levelTable.Padding = new Padding(0, 10, 0, 10); // Только сверху/снизу
 
             // Настраиваем высоту строк (равномерно по 20%)
             for (int i = 0; i < 5; i++)
@@ -384,19 +406,22 @@ namespace MemoryGame
         // Метод создания радиокнопки для выбора темы
         private RadioButton CreateThemeRadioButton(string text, string value, bool isChecked, Color bgColor)
         {
-            RadioButton rb = new RadioButton();
-            rb.Text = text;
-            rb.Font = new Font("Times New Roman", 20, FontStyle.Bold);
-            rb.Appearance = Appearance.Normal; // Обычный вид с кружочком
-            rb.Size = new Size(250, 70);       // Фиксированный размер
-            rb.Margin = new Padding(15);       // Отступы вокруг
-            rb.TextAlign = ContentAlignment.MiddleCenter; // Текст по центру
-            rb.Checked = isChecked;            // Устанавливаем выбран ли элемент
-            rb.Tag = value;                    // Сохраняем значение темы в Tag
-
-            // Подбираем цвет текста в зависимости от яркости фона
-            rb.ForeColor = IsDarkColor(bgColor) ? Color.White : Color.DarkBlue;
-            rb.BackColor = bgColor; // Устанавливаем цвет фона
+            RadioButton rb = new RadioButton
+            {
+                Text = "  " + text, // Три пробела для отступа от кружочка
+                Font = new Font("Times New Roman", 14, FontStyle.Bold), 
+                Size = new Size(230, 60), // ← чуть меньше
+                Margin = new Padding(10), // ← уменьшен с 15 до 10
+                //TextAlign = ContentAlignment.MiddleCenter,
+                Checked = isChecked,
+                Tag = value,
+                BackColor = bgColor,
+                ForeColor = IsDarkColor(bgColor) ? Color.White : Color.DarkBlue,
+                Appearance = Appearance.Normal, // ← делает как кнопку (опционально)
+                FlatStyle = FlatStyle.Flat,
+                 TextAlign = ContentAlignment.MiddleLeft, // Текст слева, чтобы кружочек был виден
+                Padding = new Padding(30, 0, 0, 0) // Отступ слева для кружочка
+            };
 
             // Обработчик изменения состояния (выбрана/не выбрана)
             rb.CheckedChanged += (s, e) =>
@@ -404,8 +429,10 @@ namespace MemoryGame
                 if (rb.Checked) // Если кнопка выбрана
                 {
                     selectedTheme = value;  // Сохраняем выбранную тему
+                    
                 }
             };
+
 
             return rb;
         }
@@ -430,7 +457,13 @@ namespace MemoryGame
             btn.FlatStyle = FlatStyle.Flat;
             btn.FlatAppearance.BorderSize = 3;
             btn.FlatAppearance.BorderColor = Color.DarkBlue;
-            btn.Dock = DockStyle.Fill; // Заполняет всю ячейку таблицы
+            //btn.Dock = DockStyle.Fill; // Заполняет всю ячейку таблицы
+            btn.Size = new Size(500, 60); // Ширина 500px, высота 60px
+
+            // Устанавливаем Anchor для центрирования
+            btn.Anchor = AnchorStyles.None; // Это центрирует кнопку в ячейке
+
+
             btn.Margin = new Padding(10, 5, 10, 5); // Отступы сверху/снизу меньше чем по бокам
             btn.Tag = levelTag; // Сохраняем название уровня в Tag
             btn.Cursor = Cursors.Hand; // Курсор-рука

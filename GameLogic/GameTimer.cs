@@ -1,58 +1,80 @@
 ﻿using System;
 using System.Windows.Forms; // ← обязательно, чтобы использовать Windows Forms Timer
+using Timer = System.Windows.Forms.Timer; // чтобы каждый раз не прописывть
 
 namespace MemoryGame.GameLogic
 {
     public class GameTimer
     {
-        private System.Windows.Forms.Timer timer; // ← явное указание!
-        private int seconds;
-
-        public int ElapsedSeconds => seconds;
+        private Timer timer;
+        private int elapsedSeconds;
+        private bool isRunning;
 
         public event Action<int> OnTick;
 
+        // Добавьте это публичное свойство только для чтения
+        public bool IsRunning
+        {
+            get { return isRunning; }
+            private set { isRunning = value; }
+        }
+
         public GameTimer()
         {
-            timer = new System.Windows.Forms.Timer(); // ← явное указание!
+            timer = new Timer();
             timer.Interval = 1000; // 1 секунда
             timer.Tick += Timer_Tick;
+            elapsedSeconds = 0;
+            isRunning = false;
         }
 
         private void Timer_Tick(object sender, EventArgs e)
         {
-            seconds++;
-            OnTick?.Invoke(seconds);
+            elapsedSeconds++;
+            OnTick?.Invoke(elapsedSeconds);
         }
 
         public void Start()
         {
-            seconds = 0;
-            timer.Start();
+            if (!isRunning)
+            {
+                timer.Start();
+                isRunning = true;
+            }
         }
 
         public void Stop()
         {
-            timer.Stop();
+            if (isRunning)
+            {
+                timer.Stop();
+                isRunning = false;
+            }
+        }
+
+        public void Pause()
+        {
+            Stop();
+        }
+
+        public void Resume()
+        {
+            Start();
         }
 
         public void Reset()
         {
-            seconds = 0;
-            timer.Stop();
+            Stop();
+            elapsedSeconds = 0;
         }
 
         public string GetFormattedTime()
         {
-            TimeSpan time = TimeSpan.FromSeconds(seconds);
-            return time.ToString(@"mm\:ss");
+            int minutes = elapsedSeconds / 60;
+            int seconds = elapsedSeconds % 60;
+            return $"{minutes:D2}:{seconds:D2}";
         }
 
-        // ВАЖНО: освобождение ресурсов, если нужно (например, при закрытии игры)
-        public void Dispose()
-        {
-            timer?.Stop();
-            timer?.Dispose();
-        }
+        public int GetElapsedSeconds() => elapsedSeconds;
     }
 }
