@@ -4,30 +4,33 @@ using System.Windows.Forms;
 
 namespace MemoryGame
 {
-    public class CustomLevelForm : Form
+    public partial class CustomLevelForm : BufferedForm  // ← partial здесь
     {
         public int SelectedRows { get; private set; }
         public int SelectedColumns { get; private set; }
 
-        private NumericUpDown rowsNumeric;
-        private NumericUpDown columnsNumeric;
-
         public CustomLevelForm()
         {
-            // Двойная буферизация - предотвращает мерцание
-            this.SetStyle(ControlStyles.AllPaintingInWmPaint |  //для снижения мерцания
-                         ControlStyles.UserPaint |  //отображение элемента управления выполняет сам элемент, а не операционная система
-                         ControlStyles.DoubleBuffer, true); //сначла рисует в буфере памяти,  затем за раз выводится все на экран
-            this.DoubleBuffered = true; // Дополнительная двойная буферизация
+            // ПЕРЕОПРЕДЕЛЯЕМ настройки из BufferedForm:
+            this.FormBorderStyle = FormBorderStyle.Fixed3D;
+            this.WindowState = FormWindowState.Normal;
+            this.BackColor = Color.LightSteelBlue;
 
-            // Устанавливаем черный фон для предотвращения видимости рабочего стола
-            this.BackColor = Color.Black;
+            // Фиксируем размер окна
+            this.Size = new Size(800, 700);
+            this.MaximumSize = new Size(800, 700);
+            this.MinimumSize = new Size(800, 700);
+            this.StartPosition = FormStartPosition.CenterScreen;
 
-            // Настраиваем форму для поддержки анимации
-            this.FormBorderStyle = FormBorderStyle.None;
-            this.WindowState = FormWindowState.Maximized;
+            // Убираем кнопки изменения размера
+            this.ControlBox = true;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
 
-            InitializeCustomComponents();
+            this.Text = "Настройка уровня";
+
+            // Инициализация UI из Designer
+            InitializeComponents(); // ← вызываем метод из Designer файла
         }
 
         protected override CreateParams CreateParams
@@ -35,148 +38,163 @@ namespace MemoryGame
             get
             {
                 CreateParams cp = base.CreateParams;
-                cp.ExStyle |= 0x02000000; // WS_EX_COMPOSITED
                 return cp;
             }
-        }
-
-        private void InitializeCustomComponents()
-        {
-            this.SuspendLayout();
-
-            this.FormBorderStyle = FormBorderStyle.None;
-            this.WindowState = FormWindowState.Maximized;
-            this.BackColor = Color.Black;
-
-            Panel mainPanel = new Panel();
-            mainPanel.Dock = DockStyle.Fill;
-            mainPanel.BackColor = Color.Black;
-
-            // Двойная буферизация для панели
-            typeof(Panel).GetProperty("DoubleBuffered",
-                System.Reflection.BindingFlags.NonPublic |
-                System.Reflection.BindingFlags.Instance)
-                .SetValue(mainPanel, true, null);
-
-            try
-            {
-                if (System.IO.File.Exists("img/ui/background2.jpg"))
-                {
-                    mainPanel.BackgroundImage = Image.FromFile("img/ui/background2.jpg");
-                    mainPanel.BackgroundImageLayout = ImageLayout.Stretch;
-                }
-            }
-            catch { }
-
-            TableLayoutPanel tableLayout = new TableLayoutPanel();
-            tableLayout.Dock = DockStyle.Fill;
-            tableLayout.RowCount = 6;
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 20));
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 15));
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 15));
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 15));
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 15));
-            tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 20));
-
-            // Заголовок
-            Label titleLabel = new Label();
-            titleLabel.Text = "ПОЛЬЗОВАТЕЛЬСКИЙ УРОВЕНЬ";
-            titleLabel.Font = new Font("Times New Roman", 36, FontStyle.Bold);
-            titleLabel.ForeColor = Color.DarkBlue;
-            titleLabel.TextAlign = ContentAlignment.MiddleCenter;
-            titleLabel.Dock = DockStyle.Fill;
-            tableLayout.Controls.Add(titleLabel, 0, 0);
-            tableLayout.BackColor = Color.Black;
-
-            // Выбор строк
-            Label rowsLabel = new Label();
-            rowsLabel.Text = "Количество строк (2-5):";
-            rowsLabel.Font = new Font("Times New Roman", 20, FontStyle.Regular);
-            rowsLabel.TextAlign = ContentAlignment.MiddleCenter;
-            rowsLabel.Dock = DockStyle.Fill;
-            tableLayout.Controls.Add(rowsLabel, 0, 1);
-            tableLayout.BackColor = Color.Black;
-
-            rowsNumeric = new NumericUpDown();
-            rowsNumeric.Font = new Font("Times New Roman", 20, FontStyle.Regular);
-            rowsNumeric.Minimum = 2;
-            rowsNumeric.Maximum = 5;
-            rowsNumeric.Value = 3;
-            rowsNumeric.Dock = DockStyle.Fill;
-            rowsNumeric.TextAlign = HorizontalAlignment.Center;
-            rowsNumeric.Margin = new Padding(200, 5, 200, 5);
-            tableLayout.Controls.Add(rowsNumeric, 0, 2);
-            tableLayout.BackColor = Color.Black;
-
-            // Выбор столбцов
-            Label columnsLabel = new Label();
-            columnsLabel.Text = "Количество столбцов (2-5):";
-            columnsLabel.Font = new Font("Times New Roman", 20, FontStyle.Regular);
-            columnsLabel.TextAlign = ContentAlignment.MiddleCenter;
-            columnsLabel.Dock = DockStyle.Fill;
-            tableLayout.Controls.Add(columnsLabel, 0, 3);
-            tableLayout.BackColor = Color.Black;
-
-            columnsNumeric = new NumericUpDown();
-            columnsNumeric.Font = new Font("Times New Roman", 20, FontStyle.Regular);
-            columnsNumeric.Minimum = 2;
-            columnsNumeric.Maximum = 5;
-            columnsNumeric.Value = 3;
-            columnsNumeric.Dock = DockStyle.Fill;
-            columnsNumeric.TextAlign = HorizontalAlignment.Center;
-            columnsNumeric.Margin = new Padding(200, 5, 200, 5);
-            tableLayout.Controls.Add(columnsNumeric, 0, 4);
-
-            // Кнопки
-            FlowLayoutPanel buttonPanel = new FlowLayoutPanel();
-            buttonPanel.Dock = DockStyle.Fill;
-            buttonPanel.FlowDirection = FlowDirection.LeftToRight;
-            buttonPanel.WrapContents = false;
-
-            Button startButton = CreateCustomButton("Начать игру", Color.Green);
-            startButton.Click += StartButton_Click;
-
-            Button cancelButton = CreateCustomButton("Отмена", Color.Red);
-            cancelButton.Click += CancelButton_Click;
-
-            buttonPanel.Controls.Add(startButton);
-            buttonPanel.Controls.Add(cancelButton);
-            tableLayout.Controls.Add(buttonPanel, 0, 5);
-
-            mainPanel.Controls.Add(tableLayout);
-            this.Controls.Add(mainPanel);
-
-            this.ResumeLayout(true);
-            this.PerformLayout();
-        }
-
-        private Button CreateCustomButton(string text, Color backColor)
-        {
-            Button button = new Button();
-            button.Text = text;
-            button.Font = new Font("Times New Roman", 18, FontStyle.Bold);
-            button.BackColor = backColor;
-            button.ForeColor = Color.White;
-            button.FlatStyle = FlatStyle.Flat;
-            button.FlatAppearance.BorderSize = 2;
-            button.FlatAppearance.BorderColor = Color.DarkBlue;
-            button.Size = new Size(200, 60);
-            button.Margin = new Padding(20);
-            button.Cursor = Cursors.Hand;
-            return button;
         }
 
         private void StartButton_Click(object sender, EventArgs e)
         {
             // Сохраняем выбранные значения
-            SelectedRows = (int)rowsNumeric.Value;
+            SelectedRows = (int)rowsNumeric.Value;  // ← доступ к элементам из Designer
             SelectedColumns = (int)columnsNumeric.Value;
 
-            // Устанавливаем результат диалога
-            this.DialogResult = DialogResult.OK;
+            // Вычисляем общее количество карт один раз
+            int totalCards = SelectedRows * SelectedColumns;
 
-            // Закрываем форму
-            this.Close();
+            // ВАЛИДАЦИЯ
+            if (!IsValidLevel(SelectedRows, SelectedColumns))
+            {
+                string errorMessage = "Невозможно создать уровень!\n\n";
+
+                if (totalCards < 4)
+                    errorMessage += "• Минимум 4 карты (2 пары)\n";
+                else if (totalCards > 25)
+                    errorMessage += "• Максимум 25 карт (5×5)\n";
+                else if (totalCards % 2 != 0)
+                    errorMessage += "• Общее количество карт должно быть чётным\n";
+                else if (SelectedRows < 1 || SelectedRows > 5 || SelectedColumns < 1 || SelectedColumns > 5)
+                    errorMessage += "• Количество строк и столбцов: от 1 до 5\n";
+
+                errorMessage += "\nПримеры допустимых размеров:\n";
+                errorMessage += "• 1×4 = 4 карты (2 пары)\n";
+                errorMessage += "• 2×2 = 4 карты (2 пары)\n";
+                errorMessage += "• 2×3 = 6 карт (3 пары)\n";
+                errorMessage += "• 3×4 = 12 карт (6 пар)\n";
+                errorMessage += "• 4×5 = 20 карт (10 пар)\n";
+                errorMessage += "• 5×4 = 20 карт (10 пар)\n";
+                errorMessage += "• 5×5 = 25 карт (нечётное - НЕЛЬЗЯ)\n";
+
+                MessageBox.Show(errorMessage, "Ошибка",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Показать информацию о создаваемом уровне
+            int specialCardsCount = GetSpecialCardsCount(totalCards);
+            int specialCardsTotal = 0;
+            string specialInfo = "";
+
+            // Пересчитываем сколько карт занимают спецкарты
+            if (specialCardsCount == 1)
+            {
+                specialCardsTotal = 2; // 1 подсказка = 2 карты
+                specialInfo = "1 подсказка";
+            }
+            else if (specialCardsCount == 2)
+            {
+                specialCardsTotal = 4; // 2 подсказки = 4 карты
+                specialInfo = "2 подсказки";
+            }
+            else if (specialCardsCount == 3)
+            {
+                specialCardsTotal = 6; // 2 подсказки + 1 перемешивание = 6 карт
+                specialInfo = "2 подсказки + 1 перемешивание";
+            }
+            else
+            {
+                specialInfo = "нет (все карты обычные)";
+            }
+
+            int regularPairs = (totalCards - specialCardsTotal) / 2;
+            int totalPairs = regularPairs +
+                (specialCardsCount == 1 ? 1 : 0) + // 1 подсказка = 1 пара
+                (specialCardsCount == 2 ? 2 : 0) + // 2 подсказки = 2 пары
+                (specialCardsCount == 3 ? 3 : 0);  // 2 подсказки + 1 перемешивание = 3 пары
+
+            string message = $"Создаётся уровень:\n\n";
+            message += $"• Размер поля: {SelectedRows} × {SelectedColumns}\n";
+            message += $"• Всего карт: {totalCards}\n";
+            message += $"• Обычных пар: {regularPairs}\n";
+            message += $"• Спецкарты: {specialInfo}\n";
+            message += $"• Всего пар на поле: {totalPairs}";
+
+            DialogResult confirm = MessageBox.Show(
+                message + "\n\nНачать игру?",
+                "Подтверждение",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (confirm == DialogResult.Yes)
+            {
+                this.DialogResult = DialogResult.OK;
+                this.Close();
+            }
+        }
+
+        private void UpdateInfoLabel()
+        {
+            int rows = (int)rowsNumeric.Value;
+            int columns = (int)columnsNumeric.Value;
+            int totalCards = rows * columns;
+
+            string info = $"Всего карт: {totalCards}";
+
+            if (totalCards < 2)
+            {
+                info += " (минимум 2 карты)";
+            }
+            else if (totalCards % 2 != 0)
+            {
+                info += " (должно быть чётное число)";
+            }
+            else
+            {
+                // Информация о спецкартах
+                int specialCards = GetSpecialCardsCount(totalCards);
+                if (specialCards == 0)
+                    info += " - без спецкарт";
+                else if (specialCards == 1)
+                    info += " - 1 подсказка";
+                else if (specialCards == 2)
+                    info += " - 2 подсказки";
+                else
+                    info += " - 2 подсказки + перемешивание";
+            }
+
+            infoLabel.Text = info; // ← доступ к infoLabel из Designer
+        }
+
+        // НОВЫЙ метод для определения количества спецкарт
+        private int GetSpecialCardsCount(int totalCards)
+        {
+            if (totalCards < 6) return 0;        // До 6 карт - без спецкарт
+            if (totalCards < 12) return 1;       // 6-11 карт - 1 подсказка
+            if (totalCards < 20) return 2;       // 12-19 карт - 2 подсказки
+            return 3;                            // 20+ карт - 2 подсказки + 1 перемешивание
+        }
+
+        // НОВЫЙ метод для проверки валидности
+        private bool IsValidLevel(int rows, int columns)
+        {
+            int totalCards = rows * columns;
+
+            // Проверяем диапазоны
+            if (rows < 1 || rows > 5 || columns < 1 || columns > 5)
+                return false;
+
+            // Минимум 4 карты (2 пары)
+            if (totalCards < 4)
+                return false;
+
+            // Максимум 25 карт
+            if (totalCards > 25)
+                return false;
+
+            // Четное количество
+            if (totalCards % 2 != 0)
+                return false;
+
+            return true;
         }
 
         private void CancelButton_Click(object sender, EventArgs e)

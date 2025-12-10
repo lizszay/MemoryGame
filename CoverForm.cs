@@ -4,18 +4,16 @@ using System.Windows.Forms;
 
 namespace MemoryGame
 {
-    public class CoverForm : Form
+    //форма заглушка
+    public class CoverForm : BufferedForm
     {
         public CoverForm()
         {
-            this.FormBorderStyle = FormBorderStyle.None;
-            this.WindowState = FormWindowState.Maximized;
             this.TopMost = true;
             this.ShowInTaskbar = false;
             this.ControlBox = false;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            //this.BackColor = Color.Black;
 
             // Опционально: можно загрузить фоновое изображение
             try

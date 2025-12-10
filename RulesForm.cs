@@ -4,31 +4,11 @@ using System.Windows.Forms;
 
 namespace MemoryGame
 {
-    public class RulesForm : Form
+    public class RulesForm : BufferedForm
     {
         public RulesForm()
         {
-            // Оптимизация отрисовки
-            this.SetStyle(ControlStyles.AllPaintingInWmPaint |
-                          ControlStyles.UserPaint |
-                          ControlStyles.DoubleBuffer, true);
-            this.DoubleBuffered = true;
-
-            this.FormBorderStyle = FormBorderStyle.None;
-            this.WindowState = FormWindowState.Maximized;
-            this.BackColor = Color.Black;
-
             InitializeForm();
-        }
-
-        protected override CreateParams CreateParams
-        {
-            get
-            {
-                CreateParams cp = base.CreateParams;
-                cp.ExStyle |= 0x02000000; // WS_EX_COMPOSITED
-                return cp;
-            }
         }
 
         private void InitializeForm()
@@ -42,9 +22,6 @@ namespace MemoryGame
                 Dock = DockStyle.Fill,
                 BackColor = Color.Transparent
             };
-
-            // Включаем двойную буферизацию
-            EnableDoubleBuffering(mainPanel);
 
             // Фон
             try
@@ -192,7 +169,7 @@ namespace MemoryGame
 
         private void backButton_Click(object sender, EventArgs e)
         {
-            this.Close(); // этого достаточно!
+            this.Close();
         }
     }
 }

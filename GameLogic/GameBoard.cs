@@ -35,7 +35,11 @@ namespace MemoryGame.GameLogic
             if (regularCardsCount <= 0 || regularCardsCount % 2 != 0)
             {
                 throw new ArgumentException(
-                    $"Невозможно создать уровень: {totalCards} карт, {specialCount} спецкарт → {regularCardsCount} обычных (должно быть >0 и чётное)");
+                    $"Невозможно создать уровень: " +
+                    "{totalCards} карт, " +
+                    "{specialCount} спецкарт → {regularCardsCount} " +
+                    "обычных (должно быть >0 и чётное)"
+                );
             }
 
             // Создаём обычные карты
@@ -49,7 +53,7 @@ namespace MemoryGame.GameLogic
                 regularCards.Add(new Card(id, CardType.Regular, Theme));
             }
 
-            // Создаём спецкарты (уже знаем, сколько нужно)
+            // Создаём спецкарты
             List<Card> specialCards = GetSpecialCards(specialCount);
 
             Cards.AddRange(regularCards);
@@ -60,7 +64,7 @@ namespace MemoryGame.GameLogic
 
         private List<int> GetRandomCardIds(int count)
         {
-            if (count > 11) count = 11; // Максимум 11 различных картинок
+            if (count > 11) count = 11;
 
             List<int> allIds = Enumerable.Range(1, 11).ToList();
             List<int> selectedIds = new List<int>();
@@ -77,7 +81,73 @@ namespace MemoryGame.GameLogic
             return selectedIds;
         }
 
+        /*private List<int> GetRandomCardIds(int count)
+        {
+
+
+            if (count > 11) count = 11; // Максимум 11 различных картинок
+
+            List<int> allIds = Enumerable.Range(1, 11).ToList();
+            List<int> selectedIds = new List<int>();
+
+            while (selectedIds.Count < count)
+            {
+                int randomId = allIds[random.Next(allIds.Count)];
+                if (!selectedIds.Contains(randomId))
+                {
+                    selectedIds.Add(randomId);
+                }
+            }
+
+            return selectedIds
+        };*/
+
         private List<Card> GetSpecialCards(int count)
+        {
+            List<Card> specialCards = new List<Card>();
+
+            if (count <= 0) return specialCards;
+
+            switch (Level.ToLower())
+            {
+                case "средний":
+                    specialCards.Add(new Card(0, CardType.Hint));
+                    break;
+
+                case "сложный":
+                    if (count >= 1) specialCards.Add(new Card(0, CardType.Hint));
+                    if (count >= 2) specialCards.Add(new Card(0, CardType.Shuffle));
+                    break;
+
+                case "эксперт":
+                    if (count >= 1) specialCards.Add(new Card(0, CardType.Hint));
+                    if (count >= 2) specialCards.Add(new Card(0, CardType.Hint));
+                    if (count >= 3) specialCards.Add(new Card(0, CardType.Shuffle));
+                    break;
+
+                default: // Пользовательский
+                    // НОВАЯ ЛОГИКА: hint сначала, потом shuffle
+                    int hintsAdded = 0;
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (hintsAdded < 2) // Сначала добавляем до 2 подсказок
+                        {
+                            specialCards.Add(new Card(0, CardType.Hint));
+                            hintsAdded++;
+                        }
+                        else // Потом перемешивание
+                        {
+                            specialCards.Add(new Card(0, CardType.Shuffle));
+                        }
+                    }
+                    break;
+            }
+
+            return specialCards;
+        }
+
+
+        /*private List<Card> GetSpecialCards(int count)
         {
             List<Card> specialCards = new List<Card>();
 
@@ -111,7 +181,7 @@ namespace MemoryGame.GameLogic
             }
 
             return specialCards;
-        }
+        }*/
 
         private int GetRequiredSpecialCardCount()
         {
@@ -127,10 +197,14 @@ namespace MemoryGame.GameLogic
                     return 3; // 2 hint + 1 shuffle
                 default: // Пользовательский
                     int total = Rows * Columns;
-                    if (total >= 20) return 3;
+                    if (total < 6) return 0;
+                    if (total < 12) return 1;
+                    if (total < 20) return 2;
+                    return 3;
+                    /*if (total >= 20) return 3;
                     if (total >= 12) return 2;
                     if (total >= 6) return 1;
-                    return 0;
+                    return 0;*/
             }
         }
 
