@@ -1,6 +1,7 @@
 ﻿using MemoryGame.GameLogic;
 using System;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 
 namespace MemoryGame
@@ -10,7 +11,18 @@ namespace MemoryGame
         // Компоненты формы
         private System.ComponentModel.IContainer components = null;
 
-        // Защищенный метод для освобождения ресурсов
+        // UI элементы
+        private Panel topPanel = null!;
+        private Panel rightPanel = null!;
+        private Panel gamePanel = null!;
+        private Panel pauseOverlay = null!;
+        private Label timerLabel = null!;
+        private Label movesLabel = null!;
+        private Label levelLabel = null!;
+        private FlowLayoutPanel starsPanel = null!;
+        private System.Windows.Forms.Button pauseButton = null!;
+
+        // Освобождение ресурсов
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -46,9 +58,10 @@ namespace MemoryGame
             this.Text = "Memory Game - Игра";
             this.FormBorderStyle = FormBorderStyle.None;
             this.WindowState = FormWindowState.Maximized;
-            this.BackColor = Color.LightBlue;
+            this.BackgroundImage = Image.FromFile(System.IO.Path.Combine(
+                    Application.StartupPath, "img", "ui", "background.jpg"));
+            this.BackgroundImageLayout = ImageLayout.Zoom;
         }
-
         // Создание всех панелей интерфейса
         private void CreateInterfacePanels()
         {
@@ -70,9 +83,6 @@ namespace MemoryGame
         {
             // Инициализация карт после загрузки формы
             this.Load += (s, e) => InitializeCardButtons();
-
-            // Вывод оверлея паузы на передний план
-            pauseOverlay.BringToFront();
         }
 
         // Создание верхней информационной панели
@@ -167,9 +177,6 @@ namespace MemoryGame
                 BackColor = Color.Transparent
             };
 
-            // Инициализация звезд (пустые при создании)
-            UpdateStars();
-
             container.Controls.Add(starsPanel);
             return container;
         }
@@ -223,11 +230,11 @@ namespace MemoryGame
             pauseButton.Click += PauseButton_Click;
 
             // Кнопка возврата в меню
-            Button menuButton = CreateSideButton("В меню");
+            System.Windows.Forms.Button menuButton = CreateSideButton("В меню");
             menuButton.Click += MenuButton_Click;
 
             // Кнопка показа правил
-            Button rulesButton = CreateSideButton("📖 Правила");
+            System.Windows.Forms.Button rulesButton = CreateSideButton("📖 Правила");
             rulesButton.Click += (s, e) => ShowRulesFromGame();
 
             // Добавление кнопок в таблицу
@@ -237,9 +244,9 @@ namespace MemoryGame
         }
 
         // Создание стилизованной боковой кнопки
-        private Button CreateSideButton(string text)
+        private System.Windows.Forms.Button CreateSideButton(string text)
         {
-            Button button = new Button
+            System.Windows.Forms.Button button = new System.Windows.Forms.Button
             {
                 Text = text,
                 Font = new Font("Times New Roman", 14, FontStyle.Bold),
@@ -264,8 +271,9 @@ namespace MemoryGame
             gamePanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.LightGreen,
-                Padding = new Padding(20, 120, 20, 20) // Отступ сверху для верхней панели
+                BackColor = Color.Transparent, // Сделать прозрачным
+
+                Padding = new Padding(20, 120, 20, 20)
             };
 
             this.Controls.Add(gamePanel);
@@ -278,8 +286,8 @@ namespace MemoryGame
             pauseOverlay = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(150, Color.Black), // Полупрозрачный черный
-                Visible = false // Скрыта по умолчанию
+                BackColor = Color.FromArgb(150, Color.Black),
+                Visible = false
             };
 
             // Текст "ИГРА НА ПАУЗЕ"
@@ -294,6 +302,9 @@ namespace MemoryGame
 
             pauseOverlay.Controls.Add(pauseLabel);
             this.Controls.Add(pauseOverlay);
+
+            // Переместить оверлей на передний план
+            pauseOverlay.BringToFront();
         }
 
         // Инициализация кнопок-карт на игровом поле
@@ -356,18 +367,18 @@ namespace MemoryGame
                 int col = i % gameBoard.Columns;
 
                 // Создание кнопки-карты
-                Button cardButton = CreateCardButton(i, cardSize, startPosition, spacing, row, col);
+                System.Windows.Forms.Button cardButton = CreateCardButton(i, cardSize, startPosition, spacing, row, col);
                 gamePanel.Controls.Add(cardButton);
             }
         }
 
         // Создание отдельной кнопки-карты
-        private Button CreateCardButton(int index, int cardSize, Point startPosition, int spacing, int row, int col)
+        private System.Windows.Forms.Button CreateCardButton(int index, int cardSize, Point startPosition, int spacing, int row, int col)
         {
             Card card = gameBoard.Cards[index];
 
             // Создание кнопки
-            Button cardButton = new Button
+            System.Windows.Forms.Button cardButton = new System.Windows.Forms.Button
             {
                 Size = new Size(cardSize, cardSize),
                 Location = new Point(
@@ -382,7 +393,7 @@ namespace MemoryGame
 
             // Настройка внешнего вида
             cardButton.FlatAppearance.BorderSize = 2;
-            cardButton.FlatAppearance.BorderColor = Color.DarkBlue;
+            //cardButton.FlatAppearance.BorderColor = Color.DarkBlue;
 
             // Установка изображения в зависимости от состояния карты
             if (card.IsMatched)

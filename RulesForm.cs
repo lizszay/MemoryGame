@@ -26,7 +26,7 @@ namespace MemoryGame
             // Фон
             try
             {
-                string bgPath = System.IO.Path.Combine(Application.StartupPath, "img", "ui", "background.jpg");
+                string bgPath = System.IO.Path.Combine(Application.StartupPath, "img", "ui", "background2.jpg");
                 if (System.IO.File.Exists(bgPath))
                 {
                     mainPanel.BackgroundImage = Image.FromFile(bgPath);

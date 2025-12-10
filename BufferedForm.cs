@@ -22,8 +22,10 @@ namespace MemoryGame
             
 
             this.FormBorderStyle = FormBorderStyle.None;
-            this.WindowState = FormWindowState.Maximized;   //форму на весь экран
-            this.BackColor = Color.Black; // Основной фон черный
+            this.WindowState = FormWindowState.Maximized;  
+           // this.BackColor = Color.Black;
+
+
         }
 
         // Переопределяем свойство CreateParams для настройки параметров создания окна

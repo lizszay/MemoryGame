@@ -10,40 +10,23 @@ namespace MemoryGame
     public partial class GameForm : BufferedForm
     {
         // === ПОЛЯ ДЛЯ ХРАНЕНИЯ СОСТОЯНИЯ ИГРЫ ===
-        private GameBoard gameBoard;
-        private GameTimer gameTimer;
+        private GameBoard gameBoard = null!;
+        private GameTimer gameTimer = null!;
         private int moves;
         private int stars;
-        private Card firstSelectedCard;
-        private Card secondSelectedCard;
+        private Card? firstSelectedCard;
+        private Card? secondSelectedCard;
         private bool isProcessing;
         private bool isPaused;
-        private string currentTheme;
-        private string currentLevel;
-        private bool rulesOpenedFromGame;
-
-        // === СВОЙСТВА ДЛЯ ДОСТУПА К UI ЭЛЕМЕНТАМ (ОБЪЯВЛЕНЫ В DESIGNER) ===
-        // Эти элементы будут инициализированы в InitializeComponent()
-        private Panel topPanel;
-        private Panel rightPanel;
-        private Panel gamePanel;
-        private Panel pauseOverlay;
-        private Label timerLabel;
-        private Label movesLabel;
-        private Label levelLabel;
-        private FlowLayoutPanel starsPanel;
-        private Button pauseButton;
-
-        // === СОБЫТИЯ ФОРМЫ ===
-        public event EventHandler ReturnToMenuRequested;
-        public event EventHandler ShowRulesRequested;
+        private string currentTheme = null!;
+        private string currentLevel = null!;
 
         // === КОНСТРУКТОРЫ ===
 
         // Конструктор для стандартных уровней
         public GameForm(string theme, string level) : this(theme, level, 0, 0) { }
 
-        /// Основной конструктор игры
+        // Основной конструктор игры
         public GameForm(string theme, string level, int customRows, int customColumns)
         {
             currentTheme = theme;
@@ -54,6 +37,9 @@ namespace MemoryGame
 
             // Инициализация пользовательского интерфейса
             InitializeComponent();
+
+            // Запуск таймера после инициализации компонентов
+            gameTimer.Start();
         }
 
         // === МЕТОДЫ ИНИЦИАЛИЗАЦИИ ИГРЫ ===
@@ -78,7 +64,7 @@ namespace MemoryGame
             ResetGameState();
         }
 
-        /// Сбрасывает состояние игры к начальным значениям
+        // Сбрасывает состояние игры к начальным значениям
         private void ResetGameState()
         {
             moves = 0;
@@ -87,7 +73,6 @@ namespace MemoryGame
             secondSelectedCard = null;
             isProcessing = false;
             isPaused = false;
-            rulesOpenedFromGame = false;
         }
 
         // === ОСНОВНЫЕ МЕТОДЫ ИГРОВОГО ПРОЦЕССА ===
@@ -99,8 +84,8 @@ namespace MemoryGame
             if (!CanProcessCardClick()) return;
 
             // Получение карты из кнопки
-            Button clickedButton = (Button)sender;
-            Card clickedCard = (Card)clickedButton.Tag;
+            System.Windows.Forms.Button clickedButton = (System.Windows.Forms.Button)sender;
+            Card clickedCard = (Card)clickedButton.Tag!;
 
             // Проверка состояния карты
             if (!IsCardClickable(clickedCard)) return;
@@ -110,7 +95,7 @@ namespace MemoryGame
         }
 
         // Обработка выбора карты
-        private void ProcessCardSelection(Card card, Button button)
+        private void ProcessCardSelection(Card card, System.Windows.Forms.Button button)
         {
             // Переворот карты
             FlipCard(card, button);
@@ -161,7 +146,7 @@ namespace MemoryGame
             }
 
             // Обычный ход: проверка совпадения
-            if (firstSelectedCard.Id == secondSelectedCard.Id)
+            if (firstSelectedCard!.Id == secondSelectedCard!.Id)
             {
                 ProcessMatch();
             }
@@ -174,8 +159,8 @@ namespace MemoryGame
         // Обработка совпадения карт
         private void ProcessMatch()
         {
-            firstSelectedCard.IsMatched = true;
-            secondSelectedCard.IsMatched = true;
+            firstSelectedCard!.IsMatched = true;
+            secondSelectedCard!.IsMatched = true;
 
             Timer timer = new Timer { Interval = 500 };
             timer.Tick += (s, e) =>
@@ -205,13 +190,13 @@ namespace MemoryGame
         private void ProcessHintCard()
         {
             // Определение карты-подсказки и второй карты
-            Card hintCard = firstSelectedCard.Type == CardType.Hint ? firstSelectedCard : secondSelectedCard;
-            Card otherCard = firstSelectedCard.Type == CardType.Hint ? secondSelectedCard : firstSelectedCard;
+            Card hintCard = firstSelectedCard!.Type == CardType.Hint ? firstSelectedCard : secondSelectedCard!;
+            Card otherCard = firstSelectedCard!.Type == CardType.Hint ? secondSelectedCard! : firstSelectedCard;
 
             // Поиск парной карты для обычной карты
             if (otherCard.Type == CardType.Regular)
             {
-                Card matchingCard = FindMatchingCard(otherCard);
+                Card? matchingCard = FindMatchingCard(otherCard);
                 if (matchingCard != null)
                 {
                     ProcessHintWithMatch(hintCard, otherCard, matchingCard);
@@ -226,20 +211,54 @@ namespace MemoryGame
         // Обработка карты перемешивания
         private void ProcessShuffleCard()
         {
-            Card shuffleCard = firstSelectedCard.Type == CardType.Shuffle ? firstSelectedCard : secondSelectedCard;
-            Card otherCard = firstSelectedCard.Type == CardType.Shuffle ? secondSelectedCard : firstSelectedCard;
+            Card shuffleCard = firstSelectedCard!.Type == CardType.Shuffle ? firstSelectedCard : secondSelectedCard!;
+            Card otherCard = firstSelectedCard!.Type == CardType.Shuffle ? secondSelectedCard! : firstSelectedCard;
 
-            // Подготовка к перемешиванию
-            PrepareForShuffle(shuffleCard, otherCard);
+            // Блокируем все карты на время анимации
+            EnableAllCardButtons(false);
 
-            // Выполнение перемешивания с задержкой
-            Timer timer = new Timer { Interval = 1000 };
-            timer.Tick += (s, e) =>
+            // Если вторая карта обычная - переворачиваем ее обратно
+            if (otherCard.Type == CardType.Regular)
             {
-                timer.Stop();
-                ExecuteShuffle(shuffleCard);
+                System.Windows.Forms.Button? otherButton = FindButtonForCard(otherCard);
+                if (otherButton != null)
+                {
+                    otherCard.IsFlipped = false;
+                    otherButton.BackgroundImage = otherCard.GetBackImage();
+                }
+            }
+
+            // Показываем карту перемешивания 1.5 секунды, затем перемешиваем
+            Timer shuffleTimer = new Timer { Interval = 1500 };
+            shuffleTimer.Tick += (s, e) =>
+            {
+                shuffleTimer.Stop();
+
+                // Скрываем карту перемешивания
+                System.Windows.Forms.Button? shuffleButton = FindButtonForCard(shuffleCard);
+                if (shuffleButton != null)
+                {
+                    shuffleCard.IsMatched = true;
+                    shuffleButton.Visible = false;
+                }
+
+                // Перемешиваем карты
+                gameBoard.ShuffleCards();
+
+                // Пересоздаем кнопки карт
+                InitializeCardButtons();
+
+                // Включаем карты (если не на паузе)
+                EnableAllCardButtons(!isPaused);
+
+                // Сбрасываем выбор
+                ResetSelection();
+
+                // Проверяем завершение игры
+                CheckGameEnd();
             };
-            timer.Start();
+
+            shuffleTimer.Start();
         }
 
         // === ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ИГРОВОЙ ЛОГИКИ ===
@@ -269,7 +288,7 @@ namespace MemoryGame
         }
 
         // Переворачивает карту лицевой стороной вверх
-        private void FlipCard(Card card, Button button)
+        private void FlipCard(Card card, System.Windows.Forms.Button button)
         {
             card.IsFlipped = true;
             button.BackgroundImage = card.Image;
@@ -278,11 +297,11 @@ namespace MemoryGame
         // Переворачивает карты обратно рубашкой вверх
         private void FlipCardsBack()
         {
-            firstSelectedCard.IsFlipped = false;
-            secondSelectedCard.IsFlipped = false;
+            firstSelectedCard!.IsFlipped = false;
+            secondSelectedCard!.IsFlipped = false;
 
-            Button firstButton = FindButtonForCard(firstSelectedCard);
-            Button secondButton = FindButtonForCard(secondSelectedCard);
+            System.Windows.Forms.Button? firstButton = FindButtonForCard(firstSelectedCard);
+            System.Windows.Forms.Button? secondButton = FindButtonForCard(secondSelectedCard);
 
             if (firstButton != null) firstButton.BackgroundImage = firstSelectedCard.GetBackImage();
             if (secondButton != null) secondButton.BackgroundImage = secondSelectedCard.GetBackImage();
@@ -291,19 +310,19 @@ namespace MemoryGame
         // Скрывает совпавшие карты
         private void HideMatchedCards()
         {
-            Button firstButton = FindButtonForCard(firstSelectedCard);
-            Button secondButton = FindButtonForCard(secondSelectedCard);
+            System.Windows.Forms.Button? firstButton = FindButtonForCard(firstSelectedCard!);
+            System.Windows.Forms.Button? secondButton = FindButtonForCard(secondSelectedCard!);
 
             if (firstButton != null) firstButton.Visible = false;
             if (secondButton != null) secondButton.Visible = false;
         }
 
         // Находит кнопку, связанную с указанной картой
-        private Button FindButtonForCard(Card card)
+        private System.Windows.Forms.Button? FindButtonForCard(Card card)
         {
             foreach (Control control in gamePanel.Controls)
             {
-                if (control is Button button && button.Tag == card)
+                if (control is System.Windows.Forms.Button button && button.Tag as Card == card)
                 {
                     return button;
                 }
@@ -312,7 +331,7 @@ namespace MemoryGame
         }
 
         // Находит парную карту для указанной карты
-        private Card FindMatchingCard(Card card)
+        private Card? FindMatchingCard(Card card)
         {
             return gameBoard.Cards.FirstOrDefault(c =>
                 c.Id == card.Id && c != card && !c.IsMatched && !c.IsFlipped);
@@ -330,15 +349,15 @@ namespace MemoryGame
         private void IncrementMoveCounter()
         {
             moves++;
-            movesLabel.Text = $"Ходы: {moves}";
+            UpdateMoveLabel();
             UpdateStars();
         }
 
         // Подготавливает игру к перемешиванию
         private void PrepareForShuffle(Card shuffleCard, Card otherCard)
         {
-            Button shuffleButton = FindButtonForCard(shuffleCard);
-            Button otherButton = FindButtonForCard(otherCard);
+            System.Windows.Forms.Button? shuffleButton = FindButtonForCard(shuffleCard);
+            System.Windows.Forms.Button? otherButton = FindButtonForCard(otherCard);
 
             // Переворот shuffle карты
             if (shuffleButton != null && !shuffleCard.IsFlipped)
@@ -355,7 +374,7 @@ namespace MemoryGame
             }
 
             // Отключение всех кнопок на время анимации
-            DisableAllCardButtons();
+            EnableAllCardButtons(false);
         }
 
         // Выполняет перемешивание карт
@@ -365,13 +384,13 @@ namespace MemoryGame
             EnableAllCardButtons(!isPaused);
 
             // Скрытие карты перемешивания
-            Button shuffleButton = FindButtonForCard(shuffleCard);
+            System.Windows.Forms.Button? shuffleButton = FindButtonForCard(shuffleCard);
             shuffleCard.IsMatched = true;
             shuffleButton?.Hide();
 
             // Перемешивание и обновление игрового поля
             gameBoard.ShuffleCards();
-            RecreateCardButtons();
+            InitializeCardButtons();
 
             ResetSelection();
             CheckGameEnd();
@@ -380,10 +399,13 @@ namespace MemoryGame
         // Обработка подсказки с найденной парной картой
         private void ProcessHintWithMatch(Card hintCard, Card otherCard, Card matchingCard)
         {
-            Button matchingButton = FindButtonForCard(matchingCard);
-            FlipCard(matchingCard, matchingButton);
+            System.Windows.Forms.Button? matchingButton = FindButtonForCard(matchingCard);
+            if (matchingButton != null)
+            {
+                FlipCard(matchingCard, matchingButton);
+            }
 
-            Timer delayTimer = new Timer { Interval = 1500 };
+            Timer delayTimer = new Timer { Interval = 1000 };
             delayTimer.Tick += (s, e) =>
             {
                 delayTimer.Stop();
@@ -393,14 +415,14 @@ namespace MemoryGame
         }
 
         // Завершает обработку подсказки с найденной парой
-        private void CompleteHintWithMatch(Card hintCard, Card otherCard, Card matchingCard, Button matchingButton)
+        private void CompleteHintWithMatch(Card hintCard, Card otherCard, Card matchingCard, System.Windows.Forms.Button? matchingButton)
         {
             otherCard.IsMatched = true;
             matchingCard.IsMatched = true;
             hintCard.IsMatched = true;
 
-            Button firstButton = FindButtonForCard(firstSelectedCard);
-            Button secondButton = FindButtonForCard(secondSelectedCard);
+            System.Windows.Forms.Button? firstButton = FindButtonForCard(firstSelectedCard!);
+            System.Windows.Forms.Button? secondButton = FindButtonForCard(secondSelectedCard!);
 
             if (firstButton != null) firstButton.Visible = false;
             if (secondButton != null) secondButton.Visible = false;
@@ -419,7 +441,7 @@ namespace MemoryGame
                 simpleTimer.Stop();
                 hintCard.IsMatched = true;
 
-                Button hintButton = FindButtonForCard(hintCard);
+                System.Windows.Forms.Button? hintButton = FindButtonForCard(hintCard);
                 if (hintButton != null) hintButton.Visible = false;
 
                 ResetSelection();
@@ -430,27 +452,24 @@ namespace MemoryGame
 
         // === МЕТОДЫ УПРАВЛЕНИЯ ИГРОЙ ===
 
-        // Пересоздает кнопки карт (например, после перемешивания)
-        private void RecreateCardButtons()
-        {
-            InitializeCardButtons();
-        }
-
-        // Отключает все кнопки карт
-        private void DisableAllCardButtons()
-        {
-            foreach (Button btn in gamePanel.Controls.OfType<Button>())
-            {
-                btn.Enabled = false;
-            }
-        }
-
         // Включает или отключает все кнопки карт
         private void EnableAllCardButtons(bool enabled)
         {
-            foreach (Button btn in gamePanel.Controls.OfType<Button>())
+            if (gamePanel == null || gamePanel.IsDisposed) return;
+
+            // Если вызываем из другого потока
+            if (gamePanel.InvokeRequired)
             {
-                btn.Enabled = enabled;
+                gamePanel.Invoke(new Action<bool>(EnableAllCardButtons), enabled);
+                return;
+            }
+
+            foreach (Control control in gamePanel.Controls)
+            {
+                if (control is System.Windows.Forms.Button button)
+                {
+                    button.Enabled = enabled;
+                }
             }
         }
 
@@ -476,23 +495,6 @@ namespace MemoryGame
                 BackColor = Color.LightBlue
             };
 
-            // Создание интерфейса диалога
-            CreateCompletionDialog(completionForm);
-
-            // Обработка результата диалога
-            if (completionForm.ShowDialog() == DialogResult.OK)
-            {
-                StartNewGame();
-            }
-            else
-            {
-                this.Close();
-            }
-        }
-
-        // Создает интерфейс диалога завершения
-        private void CreateCompletionDialog(Form dialog)
-        {
             TableLayoutPanel tableLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -506,15 +508,6 @@ namespace MemoryGame
             }
 
             // Создание элементов диалога
-            CreateDialogLabels(tableLayout);
-            CreateDialogButtons(tableLayout);
-
-            dialog.Controls.Add(tableLayout);
-        }
-
-        // Создает метки для диалога завершения
-        private void CreateDialogLabels(TableLayoutPanel tableLayout)
-        {
             Label congratsLabel = new Label
             {
                 Text = "Уровень пройден!",
@@ -531,14 +524,7 @@ namespace MemoryGame
                 Dock = DockStyle.Fill
             };
 
-            tableLayout.Controls.Add(congratsLabel, 0, 0);
-            tableLayout.Controls.Add(statsLabel, 0, 1);
-        }
-
-        // Создает кнопки для диалога завершения
-        private void CreateDialogButtons(TableLayoutPanel tableLayout)
-        {
-            Button playAgainButton = new Button
+            System.Windows.Forms.Button playAgainButton = new System.Windows.Forms.Button
             {
                 Text = "Играть ещё",
                 Font = new Font("Times New Roman", 12, FontStyle.Bold),
@@ -546,11 +532,11 @@ namespace MemoryGame
             };
             playAgainButton.Click += (s, e) =>
             {
-                ((Form)playAgainButton.Parent.Parent).DialogResult = DialogResult.OK;
-                ((Form)playAgainButton.Parent.Parent).Close();
+                completionForm.DialogResult = DialogResult.OK;
+                completionForm.Close();
             };
 
-            Button menuButton = new Button
+            System.Windows.Forms.Button menuButton = new System.Windows.Forms.Button
             {
                 Text = "В меню",
                 Font = new Font("Times New Roman", 12, FontStyle.Bold),
@@ -558,12 +544,25 @@ namespace MemoryGame
             };
             menuButton.Click += (s, e) =>
             {
-                ((Form)menuButton.Parent.Parent).DialogResult = DialogResult.Cancel;
-                ((Form)menuButton.Parent.Parent).Close();
+                completionForm.DialogResult = DialogResult.Cancel;
+                completionForm.Close();
             };
 
+            tableLayout.Controls.Add(congratsLabel, 0, 0);
+            tableLayout.Controls.Add(statsLabel, 0, 1);
             tableLayout.Controls.Add(playAgainButton, 0, 2);
             tableLayout.Controls.Add(menuButton, 0, 3);
+
+            completionForm.Controls.Add(tableLayout);
+
+            if (completionForm.ShowDialog() == DialogResult.OK)
+            {
+                StartNewGame();
+            }
+            else
+            {
+                this.Close();
+            }
         }
 
         // Начинает новую игру с теми же параметрами
@@ -574,7 +573,7 @@ namespace MemoryGame
 
             moves = 0;
             stars = 3;
-            movesLabel.Text = "Ходы: 0";
+            UpdateMoveLabel();
             UpdateStars();
 
             gameTimer.Reset();
@@ -603,10 +602,10 @@ namespace MemoryGame
             pauseOverlay.Visible = true;
             pauseButton.Text = "▶️ Продолжить";
             isPaused = true;
-            DisableAllCardButtons();
+            EnableAllCardButtons(false);
         }
 
-        /// Возобновляет игру после паузы
+        // Возобновляет игру после паузы
         private void ResumeGame()
         {
             gameTimer.Start();
@@ -616,8 +615,8 @@ namespace MemoryGame
             EnableAllCardButtons(true);
         }
 
-        /// Обработчик кнопки возврата в меню
-        private async void MenuButton_Click(object sender, EventArgs e)
+        // Обработчик кнопки возврата в меню
+        private void MenuButton_Click(object sender, EventArgs e)
         {
             // Если игра не завершена, запрашиваем подтверждение
             if (!gameBoard.AllCardsMatched())
@@ -645,60 +644,33 @@ namespace MemoryGame
             return result == DialogResult.Yes;
         }
 
-        // === МЕТОДЫ ДЛЯ РАБОТЫ С ПРАВИЛАМИ ===
-
-        // Ставит игру на паузу при открытии правил
-        public void PauseGameForRules()
-        {
-            if (!isPaused)
-            {
-                gameTimer.Stop();
-                isPaused = true;
-                rulesOpenedFromGame = true;
-                DisableAllCardButtons();
-            }
-        }
-
-        // Возобновляет игру после закрытия правил
-        public void ResumeGameAfterRules()
-        {
-            if (rulesOpenedFromGame)
-            {
-                gameTimer.Start();
-                isPaused = false;
-                rulesOpenedFromGame = false;
-                EnableAllCardButtons(true);
-                pauseButton.Text = "⏸️ Пауза";
-            }
-        }
-
         // Показывает форму правил из игры
         private void ShowRulesFromGame()
         {
-            // Сохранение состояния таймера
+            // Сохраняем состояние игры
             bool wasRunning = gameTimer.IsRunning;
 
-            // Постановка на паузу
-            gameTimer.Stop();
-            isPaused = true;
-            DisableAllCardButtons();
+            // Ставим на паузу если игра была запущена
+            if (wasRunning && !isPaused)
+            {
+                PauseGame();
+            }
 
-            // Показ правил
+            // Показываем правила
             using (RulesForm rules = new RulesForm())
             {
                 rules.ShowDialog(this);
             }
 
-            // Возобновление игры
-            if (wasRunning)
+            // Возобновляем игру ТОЛЬКО если она была запущена и сейчас на паузе
+            if (wasRunning && isPaused)
             {
-                gameTimer.Start();
-                isPaused = false;
-                EnableAllCardButtons(true);
+                ResumeGame();
             }
         }
 
         // === МЕТОДЫ ОБНОВЛЕНИЯ ИНТЕРФЕЙСА ===
+
         // Обновляет отображение звезд в зависимости от эффективности
         private void UpdateStars()
         {
@@ -714,12 +686,6 @@ namespace MemoryGame
             else stars = 3;
 
             // Создание звезд
-            CreateStars();
-        }
-
-        // Создает отображение звезд
-        private void CreateStars()
-        {
             for (int i = 0; i < 3; i++)
             {
                 PictureBox star = new PictureBox
@@ -747,10 +713,31 @@ namespace MemoryGame
         // Обновляет отображение таймера
         private void UpdateTimer(int seconds)
         {
-            timerLabel.Text = gameTimer.GetFormattedTime();
+            if (timerLabel.InvokeRequired)
+            {
+                timerLabel.Invoke(new Action<int>(UpdateTimer), seconds);
+            }
+            else
+            {
+                timerLabel.Text = gameTimer.GetFormattedTime();
+            }
+        }
+
+        // Обновляет отображение счетчика ходов
+        private void UpdateMoveLabel()
+        {
+            if (movesLabel.InvokeRequired)
+            {
+                movesLabel.Invoke(new Action(UpdateMoveLabel));
+            }
+            else
+            {
+                movesLabel.Text = $"Ходы: {moves}";
+            }
         }
 
         // === ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ===
+
         // Преобразует название темы в имя папки с изображениями
         private string GetThemeFolderName(string theme)
         {
