@@ -541,16 +541,50 @@ namespace MemoryGame
         // Начинает новую игру с теми же параметрами
         private void StartNewGame()
         {
-            InitializeGame();
+            // Сохраняем текущие размеры доски и тему
+            int rows = gameBoard.Rows;
+            int columns = gameBoard.Columns;
+            string theme = currentTheme;
+            string level = currentLevel;
+
+            // Переинициализируем игровую логику
+            if (level.ToLower() == "пользовательский")
+            {
+                // Для пользовательского уровня используем сохраненные размеры
+                InitializeGame(rows, columns);
+            }
+            else
+            {
+                // Для стандартных уровней используем дефолтные размеры
+                InitializeGame();
+            }
+
+            // Инициализируем кнопки карт
             InitializeCardButtons();
 
+            // Сбрасываем счетчики
             moves = 0;
             stars = 3;
             UpdateMoveLabel();
             UpdateStars();
 
+            // Перезапускаем таймер
             gameTimer.Reset();
             gameTimer.Start();
+        }
+
+        // Перезапускает игру для пользовательского уровня
+        private void RestartGameWithCustomLevel(int rows, int columns)
+        {
+            // Сохраняем тему
+            string theme = currentTheme;
+
+            // Закрываем текущую форму
+            this.Close();
+
+            // Создаем новую форму с теми же параметрами
+            GameForm newGameForm = new GameForm(theme, "пользовательский", rows, columns);
+            newGameForm.Show();
         }
 
         // === МЕТОДЫ УПРАВЛЕНИЯ ПАУЗОЙ ===
@@ -689,8 +723,8 @@ namespace MemoryGame
             {
                 PictureBox star = new PictureBox
                 {
-                    Size = new Size(30, 30),
-                    SizeMode = PictureBoxSizeMode.StretchImage,
+                    Size = new Size(80, 80),
+                    SizeMode = PictureBoxSizeMode.Zoom,
                     Margin = new Padding(5, 0, 5, 0)
                 };
 

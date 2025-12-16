@@ -72,7 +72,6 @@ namespace MemoryGame
         // Создание всех панелей интерфейса
         private void CreateInterfacePanels()
         {
-            
             CreateGamePanel();
 
             CreateTopPanel();
