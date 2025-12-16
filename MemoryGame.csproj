@@ -129,6 +129,9 @@
     <None Update="img\ui\star_empty.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="img\ui\star_empty1.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="img\ui\star_filled.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

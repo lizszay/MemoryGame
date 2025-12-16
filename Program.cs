@@ -10,8 +10,8 @@ namespace MemoryGame
         [STAThread]
         static void Main()
         {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
+            Application.EnableVisualStyles();   //включение визуальных стилей
+            Application.SetCompatibleTextRenderingDefault(false);   //спользует: Систему GDI+, лучше текст
 
             MainMenuForm = new MainMenuForm();
             Application.Run(MainMenuForm);

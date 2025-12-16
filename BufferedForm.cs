@@ -13,7 +13,7 @@ namespace MemoryGame
     {
         public BufferedForm()
         {
-            this.DoubleBuffered = true; //создание механизм адвойной буферизации
+            this.DoubleBuffered = true; //элементы будут перерисовывавться
 
             // метод класса Control в WinForms, который устанавливает стили поведения элемента управления.
             this.SetStyle(ControlStyles.AllPaintingInWmPaint |  //элемент управления не обрабатывает сообщение окна WM_ERASEBKGND, чтобы снизить мерцание
@@ -21,11 +21,8 @@ namespace MemoryGame
                          ControlStyles.DoubleBuffer, true); //рисование выполняется в буфере, а после завершения результат выводится на экран
             
 
-            this.FormBorderStyle = FormBorderStyle.None;
-            this.WindowState = FormWindowState.Maximized;  
-           // this.BackColor = Color.Black;
-
-
+            this.FormBorderStyle = FormBorderStyle.None;    //без границ
+            this.WindowState = FormWindowState.Maximized;   //форма на весь экран
         }
 
         // Переопределяем свойство CreateParams для настройки параметров создания окна
@@ -42,13 +39,14 @@ namespace MemoryGame
             }
         }
 
-        // Метод для включения двойной буферизации любому контролу
+        // Метод для включения двойной буферизации любому контролу(элементы, видимые на форме)
         public static void EnableDoubleBuffering(Control control)
         {
+            // Ищем свойство с именем "DoubleBuffered" в классе Control
             typeof(Control).GetProperty("DoubleBuffered",
-                System.Reflection.BindingFlags.NonPublic |
-                System.Reflection.BindingFlags.Instance)
-                .SetValue(control, true, null);
+                System.Reflection.BindingFlags.NonPublic |  // мб непубличные свойства
+                System.Reflection.BindingFlags.Instance)    // мб свойства экземпляра (не статические)
+                .SetValue(control, true, null); //
         }
     }
 }

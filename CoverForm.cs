@@ -9,26 +9,24 @@ namespace MemoryGame
     {
         public CoverForm()
         {
-            this.TopMost = true;
-            this.ShowInTaskbar = false;
-            this.ControlBox = false;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
+            this.TopMost = true;    //форма всегда переднего плана
+            this.ShowInTaskbar = false; //не появится на панели позадач 
+            this.ControlBox = false;    //убрать верхнюю панеь окна
+            this.MaximizeBox = false;   //нельзя развернуть
+            this.MinimizeBox = false;   //нельзя свернуть
 
-            // Опционально: можно загрузить фоновое изображение
-            try
-            {
-                string bgPath = System.IO.Path.Combine(Application.StartupPath, "img", "ui", "background2.jpg");
-                if (System.IO.File.Exists(bgPath))
-                {
-                    this.BackgroundImage = Image.FromFile(bgPath);
-                    this.BackgroundImageLayout = ImageLayout.Stretch;
-                }
-            }
-            catch
-            {
-                // Игнорируем ошибки загрузки фона
-            }
+            // Черный фон для заглушки
+            this.BackColor = Color.Black;
+
+            // Измените текст на "ЗАГРУЗКА..."
+            Label loadingLabel = new Label();
+            loadingLabel.Text = "ЗАГРУЗКА...";
+            loadingLabel.Font = new Font("Arial", 48, FontStyle.Bold);
+            loadingLabel.ForeColor = Color.White; 
+            loadingLabel.TextAlign = ContentAlignment.MiddleCenter;
+            loadingLabel.Dock = DockStyle.Fill;
+
+            this.Controls.Add(loadingLabel);
         }
     }
 }

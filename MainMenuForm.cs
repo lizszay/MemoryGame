@@ -5,11 +5,10 @@ using System.Windows.Forms;
 namespace MemoryGame
 {
 	//partial - класс разделен на несколько файлов
-	public partial class MainMenuForm : BufferedForm    //: BufferedForm наследуется от формы
+	public partial class MainMenuForm : BufferedForm    
 	{
 		private string selectedTheme = "Животные";
 
-		// Флаги состояния формы
 		private bool isInitialized = false; //инициализировалась ли форма
 		private bool isFirstActivation = true;  //была ли открыта форма
 
@@ -96,12 +95,12 @@ namespace MemoryGame
 				gameForm = new GameForm(theme, level);
 			}
 
-			// Переключение на форму игры
-			await SwitchToForm(gameForm);
+            // ShowDialog БЛОКИРУЕТ меню автоматически!
+            gameForm.ShowDialog(this); // ← this означает, что меню - владелец игры
 
-			// Настройка событий для показа правил из игры
-			//ConfigureGameFormEvents(gameForm);
-		}
+            // После закрытия игры код продолжается здесь
+            this.Activate(); // Активируем меню
+        }
 
 		// Показ формы настройки пользовательского уровня
 		private void ShowCustomLevelForm()
@@ -116,36 +115,8 @@ namespace MemoryGame
 			}
 		}
 
-		// Переключение между формами с анимацией
-		private async System.Threading.Tasks.Task SwitchToForm(Form nextForm)
-		{
-			// Создание и показ формы-заглушки
-			CoverForm cover = new CoverForm();
-			cover.Show();
-			cover.BringToFront();
-
-			// Даем системе время отрисовать затычку
-			await System.Threading.Tasks.Task.Yield();
-
-			// Скрываем текущую форму
-			this.Hide();
-
-			// Настройка события закрытия новой формы
-			ConfigureFormClosedEvent(nextForm, cover);
-
-			// Показ новой формы
-			nextForm.Show();
-			nextForm.BringToFront();
-
-			// Закрытие заглушки
-			if (!cover.IsDisposed)
-			{
-				cover.Close();
-			}
-		}
-
-		// Ожидание завершения инициализации
-		private void WaitForInitialization()
+        // Ожидание завершения инициализации
+        private void WaitForInitialization()
 		{
 			if (!isInitialized)
 			{
@@ -166,48 +137,5 @@ namespace MemoryGame
 			this.Activated += (s, e) => isFirstActivation = false;
 			this.Shown += (s, e) => isFirstActivation = false;
 		}
-
-		// Настройка события закрытия формы
-		private void ConfigureFormClosedEvent(Form nextForm, CoverForm cover)
-		{
-			nextForm.FormClosed += (sender, args) =>
-			{
-				// Возврат к главному меню
-				if (!this.IsDisposed)
-				{
-					this.Invoke((MethodInvoker)delegate
-					{
-						this.Show();
-						this.BringToFront();
-					});
-				}
-
-				// Закрытие заглушки
-				if (!cover.IsDisposed)
-				{
-					cover.Invoke((MethodInvoker)delegate
-					{
-						cover.Close();
-					});
-				}
-			};
-		}
-
-		// Настройка событий формы игры
-		/*private void ConfigureGameFormEvents(GameForm gameForm)
-		{
-			gameForm.ShowRulesRequested += async (s, e) =>
-			{
-				// Пауза игры при показе правил
-				gameForm.PauseGameForRules();
-
-				// Показ формы правил
-				RulesForm rulesForm = new RulesForm();
-				await SwitchToForm(rulesForm);
-
-				// Возобновление игры после закрытия правил
-				gameForm.ResumeGameAfterRules();
-			};
-		}*/
-	}
+    }
 }

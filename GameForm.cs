@@ -9,7 +9,6 @@ namespace MemoryGame
 {
     public partial class GameForm : BufferedForm
     {
-        // === ПОЛЯ ДЛЯ ХРАНЕНИЯ СОСТОЯНИЯ ИГРЫ ===
         private GameBoard gameBoard = null!;
         private GameTimer gameTimer = null!;
         private int moves;
@@ -21,9 +20,7 @@ namespace MemoryGame
         private string currentTheme = null!;
         private string currentLevel = null!;
 
-        // === КОНСТРУКТОРЫ ===
-
-        // Конструктор для стандартных уровней
+        // Конструктор для стандартных уровней, вызываетс ядруго конструктор
         public GameForm(string theme, string level) : this(theme, level, 0, 0) { }
 
         // Основной конструктор игры
@@ -42,7 +39,6 @@ namespace MemoryGame
             gameTimer.Start();
         }
 
-        // === МЕТОДЫ ИНИЦИАЛИЗАЦИИ ИГРЫ ===
 
         // Инициализирует игровую логику с заданными параметрами
         private void InitializeGame(int rows = 0, int columns = 0)
@@ -53,14 +49,20 @@ namespace MemoryGame
                 (rows, columns) = LevelManager.GetLevelDimensions(currentLevel);
             }
 
-            // Создание игровой доски
+            // 👇 ОСТАНОВКА И ОТПИСКА ОТ СТАРОГО ТАЙМЕРА
+            if (gameTimer != null)
+            {
+                gameTimer.Stop();
+                gameTimer.OnTick -= UpdateTimer; // ← ВАЖНО: отписка!
+                                                 // Если GameTimer IDisposable — вызовите Dispose()
+            }
+
             gameBoard = new GameBoard(rows, columns, GetThemeFolderName(currentTheme), currentLevel);
 
-            // Инициализация таймера
+            // Создание НОВОГО таймера
             gameTimer = new GameTimer();
-            gameTimer.OnTick += UpdateTimer;
+            gameTimer.OnTick += UpdateTimer; // ← новая подписка
 
-            // Сброс счетчиков и флагов
             ResetGameState();
         }
 
@@ -486,83 +488,54 @@ namespace MemoryGame
         // Показывает диалог завершения уровня
         private void ShowGameCompletionDialog()
         {
-            Form completionForm = new Form
-            {
-                Text = "Поздравляем!",
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                StartPosition = FormStartPosition.CenterScreen,
-                Size = new Size(400, 250),
-                BackColor = Color.LightBlue
-            };
+            // Останавливаем таймер
+            gameTimer.Stop();
 
-            TableLayoutPanel tableLayout = new TableLayoutPanel
+            // Создаем и показываем форму результатов
+            using (GameResultForm resultForm = new GameResultForm(
+                stars: stars,
+                moves: moves,
+                elapsedSeconds: gameTimer.ElapsedSeconds,
+                levelName: currentLevel,
+                rows: gameBoard.Rows,
+                columns: gameBoard.Columns))
             {
-                Dock = DockStyle.Fill,
-                RowCount = 4
-            };
-
-            // Настройка строк
-            for (int i = 0; i < 4; i++)
-            {
-                tableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 25));
+                // Показываем как диалоговое окно
+                if (resultForm.ShowDialog(this) == DialogResult.OK)
+                {
+                    // Играть снова
+                    StartNewGame();
+                }
+                else
+                {
+                    // Выход в меню
+                    this.Close();
+                }
             }
+        }
 
-            // Создание элементов диалога
-            Label congratsLabel = new Label
-            {
-                Text = "Уровень пройден!",
-                Font = new Font("Times New Roman", 18, FontStyle.Bold),
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock = DockStyle.Fill
-            };
+        // Метод для расчета эффективности в процентах
+        private double CalculateEfficiency()
+        {
+            if (gameBoard == null || gameTimer == null) return 0;
 
-            Label statsLabel = new Label
-            {
-                Text = $"Ходы: {moves}\nВремя: {gameTimer.GetFormattedTime()}",
-                Font = new Font("Times New Roman", 14, FontStyle.Regular),
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock = DockStyle.Fill
-            };
+            int totalCards = gameBoard.Rows * gameBoard.Columns;
+            int pairs = totalCards / 2;
 
-            System.Windows.Forms.Button playAgainButton = new System.Windows.Forms.Button
-            {
-                Text = "Играть ещё",
-                Font = new Font("Times New Roman", 12, FontStyle.Bold),
-                BackColor = Color.Gold
-            };
-            playAgainButton.Click += (s, e) =>
-            {
-                completionForm.DialogResult = DialogResult.OK;
-                completionForm.Close();
-            };
+            if (pairs == 0 || totalCards == 0) return 0;
 
-            System.Windows.Forms.Button menuButton = new System.Windows.Forms.Button
-            {
-                Text = "В меню",
-                Font = new Font("Times New Roman", 12, FontStyle.Bold),
-                BackColor = Color.LightSteelBlue
-            };
-            menuButton.Click += (s, e) =>
-            {
-                completionForm.DialogResult = DialogResult.Cancel;
-                completionForm.Close();
-            };
+            double movesPerPair = (double)moves / pairs;
+            double timePerCard = (double)gameTimer.ElapsedSeconds / totalCards;
 
-            tableLayout.Controls.Add(congratsLabel, 0, 0);
-            tableLayout.Controls.Add(statsLabel, 0, 1);
-            tableLayout.Controls.Add(playAgainButton, 0, 2);
-            tableLayout.Controls.Add(menuButton, 0, 3);
+            // Идеальные значения
+            double idealMovesPerPair = 1.2;
+            double idealTimePerCard = 4.0;
 
-            completionForm.Controls.Add(tableLayout);
+            // Эффективность в процентах (чем ближе к идеалу, тем выше)
+            double movesEfficiency = Math.Max(0, 100 - (movesPerPair - idealMovesPerPair) * 25);
+            double timeEfficiency = Math.Max(0, 100 - (timePerCard - idealTimePerCard) * 10);
 
-            if (completionForm.ShowDialog() == DialogResult.OK)
-            {
-                StartNewGame();
-            }
-            else
-            {
-                this.Close();
-            }
+            return (movesEfficiency * 0.6 + timeEfficiency * 0.4);
         }
 
         // Начинает новую игру с теми же параметрами
@@ -618,10 +591,21 @@ namespace MemoryGame
         // Обработчик кнопки возврата в меню
         private void MenuButton_Click(object sender, EventArgs e)
         {
+            // Немедленно ставим игру на паузу — НОВОЕ ПОВЕДЕНИЕ
+            if (!isPaused)
+            {
+                PauseGame(); // Останавливает таймер и блокирует карты
+            }
+
             // Если игра не завершена, запрашиваем подтверждение
             if (!gameBoard.AllCardsMatched())
             {
-                if (!ConfirmExitToMenu()) return;
+                if (!ConfirmExitToMenu())
+                {
+                    // Если пользователь отменил выход — возобновляем игру
+                    ResumeGame();
+                    return;
+                }
             }
 
             // Закрытие игровой формы
@@ -634,7 +618,7 @@ namespace MemoryGame
             this.Enabled = false;
 
             DialogResult result = MessageBox.Show(
-                "Вы точно хотите выйти в меню? Текущий прогресс будет потерян.",
+                "Вы точно хотите выйти в меню?",
                 "Подтверждение выхода",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
@@ -674,16 +658,31 @@ namespace MemoryGame
         // Обновляет отображение звезд в зависимости от эффективности
         private void UpdateStars()
         {
+            if (starsPanel == null || gameBoard == null)
+                return;
+
             starsPanel.Controls.Clear();
 
-            // Расчет эффективности
             int maxMoves = gameBoard.Rows * gameBoard.Columns * 2;
-            double efficiency = (double)moves / maxMoves;
+            double efficiency = maxMoves > 0 ? (double)moves / maxMoves : 0;
 
-            // Определение количества звезд
-            if (efficiency > 0.8) stars = 1;
-            else if (efficiency > 0.6) stars = 2;
-            else stars = 3;
+            // ⭐⭐⭐ ПРОСТЫЕ КРИТЕРИИ ПО ХОДАМ ⭐⭐⭐
+            if (efficiency > 1.0) // Более 100% использованных ходов = 0 звезд
+            {
+                stars = 0;
+            }
+            else if (efficiency > 0.85) // 85-100% = 1 звезда
+            {
+                stars = 1;
+            }
+            else if (efficiency > 0.70) // 70-85% = 2 звезды
+            {
+                stars = 2;
+            }
+            else // <70% = 3 звезды
+            {
+                stars = 3;
+            }
 
             // Создание звезд
             for (int i = 0; i < 3; i++)
@@ -691,22 +690,69 @@ namespace MemoryGame
                 PictureBox star = new PictureBox
                 {
                     Size = new Size(30, 30),
-                    SizeMode = PictureBoxSizeMode.StretchImage
+                    SizeMode = PictureBoxSizeMode.StretchImage,
+                    Margin = new Padding(5, 0, 5, 0)
                 };
 
-                // Загрузка изображений звезд или создание цветных квадратов
                 try
                 {
-                    star.Image = i < stars ?
-                        Image.FromFile("img/ui/star_filled.png") :
-                        Image.FromFile("img/ui/star_empty.png");
+                    if (i < stars)
+                    {
+                        star.Image = Image.FromFile("img/ui/star_filled.png");
+                    }
+                    else if (stars == 0)
+                    {
+                        star.Image = Image.FromFile("img/ui/star_empty.png");
+                        star.BackColor = Color.DarkGray;
+                    }
+                    else
+                    {
+                        star.Image = Image.FromFile("img/ui/star_empty.png");
+                    }
                 }
                 catch
                 {
-                    star.BackColor = i < stars ? Color.Gold : Color.Gray;
+                    if (i < stars)
+                    {
+                        star.BackColor = Color.Gold;
+                    }
+                    else if (stars == 0)
+                    {
+                        star.BackColor = Color.DarkGray;
+                    }
+                    else
+                    {
+                        star.BackColor = Color.LightGray;
+                    }
                 }
 
                 starsPanel.Controls.Add(star);
+            }
+        }
+
+        // Рассчитывает максимальное время для текущего уровня
+        private int CalculateMaxTimeForLevel()
+        {
+            if (gameBoard == null) return 180;
+
+            int totalCards = gameBoard.Rows * gameBoard.Columns;
+
+            // ⭐⭐⭐ БОЛЕЕ КОРОТКИЕ ВРЕМЕННЫЕ ЛИМИТЫ ⭐⭐⭐
+            switch (currentLevel.ToLower())
+            {
+                case "легкий":    // 2x2 = 4 карты
+                    return 90;    // 1.5 минуты (было 2)
+                case "средний":   // 3x3 = 9 карт
+                    return 135;   // 2.25 минуты (было 3)
+                case "сложный":   // 4x4 = 16 карт
+                    return 180;   // 3 минуты (было 4)
+                case "эксперт":   // 5x5 = 25 карт
+                    return 225;   // 3.75 минуты (было 5)
+                case "пользовательский":
+                    // Формула: 8 секунд на карту + 30 секунд базовое время (было 10+60)
+                    return totalCards * 8 + 30;
+                default:
+                    return 135;   // По умолчанию 2.25 минуты
             }
         }
 
@@ -720,6 +766,13 @@ namespace MemoryGame
             else
             {
                 timerLabel.Text = gameTimer.GetFormattedTime();
+
+                // ⭐⭐⭐ ОБНОВЛЯЕМ ЗВЕЗДЫ КАЖДУЮ СЕКУНДУ ⭐⭐⭐
+                // Обновляем звезды каждые 10 секунд или при изменении минут
+                if (seconds % 10 == 0 || seconds % 60 == 0)
+                {
+                    UpdateStars();
+                }
             }
         }
 

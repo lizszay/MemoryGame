@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using System.IO;
+
 
 namespace MemoryGame
 {
@@ -42,10 +44,13 @@ namespace MemoryGame
         // Освобождение ресурсов
         protected override void Dispose(bool disposing)
         {
+            //если компонент создан
             if (disposing && (components != null))
             {
+                // Освобождаем все компоненты (таймеры, списки картинок и т.д.)
                 components.Dispose();
             }
+            // Вызываем родительский Dispose для освобождения базовых ресурсов
             base.Dispose(disposing);
         }
 
@@ -91,40 +96,24 @@ namespace MemoryGame
             EnableDoubleBuffering(mainPanel);
 
             // Загрузка фонового изображения
-            LoadBackgroundImage();
+            //LoadBackgroundImage();
+            // Фон, если пробелма с фоном, то пусть программу продолжается
+            try
+            {
+                //Application.StartupPath - расположение папки программы
+                // Path.Combine аргументы - продолжение, вернёт строку целого пути к файлу
+                string bgPath = Path.Combine(Application.StartupPath, "img", "ui", "background2.jpg");
+                if (File.Exists(bgPath))    //существввует ли файл
+                {
+                    mainPanel.BackgroundImage = Image.FromFile(bgPath); //создаёт объект Image из указанного файла
+                    mainPanel.BackgroundImageLayout = ImageLayout.Stretch;  //изображение растягиввается
+                }
+            }
+            catch { }
+
 
             // Добавление панели на форму
             this.Controls.Add(mainPanel);
-        }
-
-        // Включение двойной буферизации для элемента управления
-        private void EnableDoubleBuffering(Control control)
-        {
-            typeof(Control).GetProperty("DoubleBuffered",
-                System.Reflection.BindingFlags.NonPublic |
-                System.Reflection.BindingFlags.Instance)
-                .SetValue(control, true, null);
-        }
-
-        // Загрузка фонового изображения
-        private void LoadBackgroundImage()
-        {
-            try
-            {
-                // Формирование пути к файлу фона
-                string bgPath = System.IO.Path.Combine(
-                    Application.StartupPath, "img", "ui", "background2.jpg");
-
-                if (System.IO.File.Exists(bgPath))
-                {
-                    mainPanel.BackgroundImage = Image.FromFile(bgPath);
-                    mainPanel.BackgroundImageLayout = ImageLayout.Stretch;
-                }
-            }
-            catch (Exception)
-            {
-                // Ошибка загрузки фона - остаемся с цветным фоном
-            }
         }
 
         // Создание интерфейса главного меню

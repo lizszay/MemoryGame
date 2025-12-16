@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MemoryGame.GameLogic;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -84,10 +85,7 @@ namespace MemoryGame
         /// </summary>
         private int GetSpecialCardsCount(int totalCards)
         {
-            if (totalCards < 6) return 0;        // До 6 карт - без спецкарт
-            if (totalCards < 12) return 1;       // 6-11 карт - 1 подсказка
-            if (totalCards < 20) return 2;       // 12-19 карт - 2 подсказки
-            return 3;                            // 20+ карт - 2 подсказки + 1 перемешивание
+            return LevelManager.GetSpecialCardsCountForCustom(totalCards);                            // 20+ карт - 2 подсказки + 1 перемешивание
         }
 
         /// <summary>
@@ -96,21 +94,20 @@ namespace MemoryGame
         private bool IsValidLevel(int rows, int columns)
         {
             int totalCards = rows * columns;
-
-            // Проверка диапазонов строк и столбцов
-            if (rows < 1 || rows > 5 || columns < 1 || columns > 5)
+            if (rows < 1 || rows > 5 || columns < 1 || columns > 5) 
+                return false;
+            if (totalCards > 25 || totalCards < 4)
                 return false;
 
-            // Минимум 4 карты (2 пары)
-            if (totalCards < 4)
+            int specialCount = GetSpecialCardsCount(totalCards);
+            int regularCards = totalCards - specialCount;
+
+            // Минимум 4 обычных карты (2 пары)
+            if (regularCards < 4)
                 return false;
 
-            // Максимум 25 карт
-            if (totalCards > 25)
-                return false;
-
-            // Четное количество карт
-            if (totalCards % 2 != 0)
+            // Обычные карты должны быть чётными
+            if (regularCards % 2 != 0)
                 return false;
 
             return true;
@@ -128,8 +125,6 @@ namespace MemoryGame
                 errorMessage += "• Минимум 4 карты (2 пары)\n";
             else if (totalCards > 25)
                 errorMessage += "• Максимум 25 карт (5×5)\n";
-            else if (totalCards % 2 != 0)
-                errorMessage += "• Общее количество карт должно быть чётным\n";
             else
                 errorMessage += "• Количество строк и столбцов: от 1 до 5\n";
 
@@ -159,15 +154,13 @@ namespace MemoryGame
             {
                 info += " (минимум 2 карты)";
             }
-            else if (totalCards % 2 != 0)
-            {
-                info += " (должно быть чётное число)";
-            }
             else
             {
-                // Информация о спецкартах
                 int specialCards = GetSpecialCardsCount(totalCards);
-                info += GetSpecialCardsInfo(specialCards);
+                if (specialCards < 0)
+                    info += " — невозможно создать";
+                else
+                    info += GetSpecialCardsInfo(specialCards);
             }
 
             return info;
@@ -223,35 +216,39 @@ namespace MemoryGame
             stats.TotalCards = totalCards;
             stats.SpecialCardsCount = specialCardsCount;
 
-            // Расчет количества карт, занятых спецкартами
-            if (specialCardsCount == 1)
+            // Спецкарты — одиночные, каждая занимает 1 клетку
+            stats.SpecialCardsTotal = specialCardsCount;
+
+            // Определяем, какие именно спецкарты есть
+            if (specialCardsCount == 0)
             {
-                stats.SpecialCardsTotal = 2; // 1 подсказка = 2 карты
+                stats.SpecialInfo = "нет (все карты обычные)";
+            }
+            else if (specialCardsCount == 1)
+            {
                 stats.SpecialInfo = "1 подсказка";
             }
             else if (specialCardsCount == 2)
             {
-                stats.SpecialCardsTotal = 4; // 2 подсказки = 4 карты
-                stats.SpecialInfo = "2 подсказки";
+                stats.SpecialInfo = "1 подсказка + 1 перемешивание";
             }
             else if (specialCardsCount == 3)
             {
-                stats.SpecialCardsTotal = 6; // 2 подсказки + 1 перемешивание = 6 карт
                 stats.SpecialInfo = "2 подсказки + 1 перемешивание";
             }
             else
             {
-                stats.SpecialInfo = "нет (все карты обычные)";
+                // На случай ошибки (не должно происходить)
+                stats.SpecialInfo = $"{specialCardsCount} спецкарт";
             }
 
-            // Расчет количества обычных пар
-            stats.RegularPairs = (totalCards - stats.SpecialCardsTotal) / 2;
+            // Обычные карты — только они образуют пары
+            int regularCards = totalCards - specialCardsCount;
+            stats.RegularPairs = regularCards / 2; // гарантированно чётное число по валидации
 
-            // Расчет общего количества пар
-            stats.TotalPairs = stats.RegularPairs +
-                (specialCardsCount == 1 ? 1 : 0) + // 1 подсказка = 1 пара
-                (specialCardsCount == 2 ? 2 : 0) + // 2 подсказки = 2 пары
-                (specialCardsCount == 3 ? 3 : 0);  // 2 подсказки + 1 перемешивание = 3 пары
+            // Общее число пар = только обычные пары!
+            // Спецкарты НЕ являются парами и не участвуют в подсчёте пар
+            stats.TotalPairs = stats.RegularPairs;
 
             return stats;
         }

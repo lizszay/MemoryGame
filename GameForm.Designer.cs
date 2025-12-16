@@ -8,11 +8,13 @@ namespace MemoryGame
 {
     public partial class GameForm : BufferedForm
     {
-        // Компоненты формы
+        private const int PANEL_MARGIN = 20; // отступ от краёв панели
+
+        // контейнер для невидимых элементов
         private System.ComponentModel.IContainer components = null;
 
-        // UI элементы
-        private Panel topPanel = null!;
+        // UI элементы - интеркативные
+        private Panel topPanel = null!; // null! - значение будет позже
         private Panel rightPanel = null!;
         private Panel gamePanel = null!;
         private Panel pauseOverlay = null!;
@@ -25,12 +27,16 @@ namespace MemoryGame
         // Освобождение ресурсов
         protected override void Dispose(bool disposing)
         {
+            //если компонент создан
             if (disposing && (components != null))
             {
+                // Освобождаем все компоненты (таймеры, списки картинок и т.д.)
                 components.Dispose();
             }
+            // Вызываем родительский Dispose для освобождения базовых ресурсов
             base.Dispose(disposing);
         }
+
 
         // Инициализация компонентов формы
         private void InitializeComponent()
@@ -47,8 +53,9 @@ namespace MemoryGame
             // Подписка на события загрузки формы
             WireFormEvents();
 
-            // Возобновление перерисовки и применение разметки
+            // Возобновление перерисовки
             this.ResumeLayout(true);
+            //принудительное применение логики макета к дочерним элементам
             this.PerformLayout();
         }
 
@@ -58,27 +65,24 @@ namespace MemoryGame
             this.Text = "Memory Game - Игра";
             this.FormBorderStyle = FormBorderStyle.None;
             this.WindowState = FormWindowState.Maximized;
-            this.BackgroundImage = Image.FromFile(System.IO.Path.Combine(
+            this.BackgroundImage = Image.FromFile(Path.Combine(
                     Application.StartupPath, "img", "ui", "background.jpg"));
-            this.BackgroundImageLayout = ImageLayout.Zoom;
+            this.BackgroundImageLayout = ImageLayout.Zoom;  //масштабируется
         }
         // Создание всех панелей интерфейса
         private void CreateInterfacePanels()
         {
-            // Создание верхней панели с информацией
-            CreateTopPanel();
-
-            // Создание правой панели с кнопками управления
-            CreateRightPanel();
-
-            // Создание центральной панели для карт
+            
             CreateGamePanel();
 
-            // Создание оверлея паузы
+            CreateTopPanel();
+
+            CreateRightPanel();
+            // Создание оверлея(элемент, располгаетсяпо верх для какой-то информации) паузы
             CreatePauseOverlay();
         }
 
-        // Подписка на события формы
+        // Подписка на события загрузки формы
         private void WireFormEvents()
         {
             // Инициализация карт после загрузки формы
@@ -102,7 +106,6 @@ namespace MemoryGame
             // Добавление элементов информации в таблицу
             AddInfoTableElements(infoTable);
 
-            // Компоновка панели
             topPanel.Controls.Add(infoTable);
             this.Controls.Add(topPanel);
         }
@@ -159,7 +162,6 @@ namespace MemoryGame
             };
         }
 
-        // Создание контейнера для звезд
         private Panel CreateStarsContainer()
         {
             Panel container = new Panel
@@ -181,7 +183,6 @@ namespace MemoryGame
             return container;
         }
 
-        // Создание правой панели с кнопками управления
         private void CreateRightPanel()
         {
             // Основная панель фиксированной ширины
@@ -198,7 +199,6 @@ namespace MemoryGame
             // Создание кнопок управления
             CreateControlButtons(buttonTable);
 
-            // Компоновка панели
             rightPanel.Controls.Add(buttonTable);
             this.Controls.Add(rightPanel);
         }
@@ -258,7 +258,6 @@ namespace MemoryGame
                 Cursor = Cursors.Hand
             };
 
-            // Настройка внешнего вида рамки
             button.FlatAppearance.BorderSize = 2;
             button.FlatAppearance.BorderColor = Color.White;
 
@@ -273,7 +272,8 @@ namespace MemoryGame
                 Dock = DockStyle.Fill,
                 BackColor = Color.Transparent, // Сделать прозрачным
 
-                Padding = new Padding(20, 120, 20, 20)
+               // Padding = new Padding(20) // ← 10 пикселей достаточно
+
             };
 
             this.Controls.Add(gamePanel);
@@ -329,30 +329,33 @@ namespace MemoryGame
         // Расчет оптимального размера карты
         private int CalculateCardSize()
         {
-            // Доступное пространство с учетом отступов
-            int availableWidth = gamePanel.Width - 50;
-            int availableHeight = gamePanel.Height - 50;
+            int spacing = 10;
+            int horizontalGaps = (gameBoard.Columns - 1) * spacing;
+            int verticalGaps = (gameBoard.Rows - 1) * spacing;
 
-            // Максимальные размеры для одной карты
-            int maxWidth = availableWidth / gameBoard.Columns - 50;
-            int maxHeight = availableHeight / gameBoard.Rows - 50;
+            // Доступная область = вся панель минус отступы
+            int availableWidth = gamePanel.ClientSize.Width - 2 * PANEL_MARGIN;
+            int availableHeight = gamePanel.ClientSize.Height - 2 * PANEL_MARGIN;
 
-            // Выбор меньшего размера для гарантии размещения
-            return Math.Min(maxWidth, maxHeight);
+            if (gameBoard.Columns == 0 || gameBoard.Rows == 0)
+                return 50;
+
+            int maxWidth = (availableWidth - horizontalGaps) / gameBoard.Columns;
+            int maxHeight = (availableHeight - verticalGaps) / gameBoard.Rows;
+
+            return Math.Max(40, Math.Min(maxWidth, maxHeight));
         }
 
         // Расчет стартовой позиции для сетки карт
         private Point CalculateCardStartPosition(int cardSize, int spacing)
         {
-            // Центрирование по горизонтали
-            int gridWidth = gameBoard.Columns * (cardSize + spacing);
-            int startX = (gamePanel.Width - gridWidth) / 2;
+            int horizontalGaps = (gameBoard.Columns - 1) * spacing;
+            int totalWidth = gameBoard.Columns * cardSize + horizontalGaps;
+            int startX = PANEL_MARGIN + (gamePanel.ClientSize.Width - 2 * PANEL_MARGIN - totalWidth) / 2;
 
-            // Центрирование по вертикали с учетом верхней панели
-            int topPanelHeight = 100;
-            int availableHeight = gamePanel.Height - topPanelHeight;
-            int gridHeight = gameBoard.Rows * (cardSize + spacing);
-            int startY = topPanelHeight + (availableHeight - gridHeight) / 2;
+            int verticalGaps = (gameBoard.Rows - 1) * spacing;
+            int totalHeight = gameBoard.Rows * cardSize + verticalGaps;
+            int startY = PANEL_MARGIN + (gamePanel.ClientSize.Height - 2 * PANEL_MARGIN - totalHeight) / 2;
 
             return new Point(startX, startY);
         }

@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using System.IO;
 
 namespace MemoryGame.GameLogic
 {
@@ -39,7 +40,7 @@ namespace MemoryGame.GameLogic
             }
 
             // карточка создается, но свойство Image остается null
-            if (System.IO.File.Exists(imagePath))
+            if (File.Exists(imagePath))
             {
                 Image = Image.FromFile(imagePath);
             }
@@ -51,6 +52,7 @@ namespace MemoryGame.GameLogic
         }
     }
 
+    //enum - тип данных, для создания констант
     public enum CardType
     {
         Regular,
