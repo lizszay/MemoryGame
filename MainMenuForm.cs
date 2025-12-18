@@ -26,7 +26,7 @@ namespace MemoryGame
 		{
 			base.OnShown(e);	//форма показана
 
-			WaitForInitialization();// Ожидание завершения инициализации
+			//WaitForInitialization();// Ожидание завершения инициализации
 		}
 
 		// Обработчик клика по кнопке выхода
@@ -116,7 +116,7 @@ namespace MemoryGame
 		}
 
         // Ожидание завершения инициализации
-        private void WaitForInitialization()
+       /* private void WaitForInitialization()
 		{
 			if (!isInitialized)
 			{
@@ -125,7 +125,7 @@ namespace MemoryGame
 					System.Threading.Thread.Sleep(10);
 				}
 			}
-		}
+		}*/
 
 		// Настройка событий формы
 		private void ConfigureFormEvents()

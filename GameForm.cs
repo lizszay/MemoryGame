@@ -52,9 +52,8 @@ namespace MemoryGame
             // 👇 ОСТАНОВКА И ОТПИСКА ОТ СТАРОГО ТАЙМЕРА
             if (gameTimer != null)
             {
+                gameTimer.OnTick -= UpdateTimer; // ← добавить отписку
                 gameTimer.Stop();
-                gameTimer.OnTick -= UpdateTimer; // ← ВАЖНО: отписка!
-                                                 // Если GameTimer IDisposable — вызовите Dispose()
             }
 
             gameBoard = new GameBoard(rows, columns, GetThemeFolderName(currentTheme), currentLevel);
